@@ -39,7 +39,7 @@ const GamePage = () => {
     lowScore: 40,
     highReward: 5,
     lowPenalty: 5
-});
+  });
   
   const [weakSubjects, setWeakSubjects] = useState([
     { subject: 'math', wrongCount: 0, wrongRate: 0 },
@@ -323,7 +323,6 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* Welcome Banner */}
           <div className="text-center mb-6">
             <div className="inline-block bg-white rounded-full p-4 shadow-lg mb-4">
               <span className="text-6xl">👩‍🎓✨</span>
@@ -395,7 +394,6 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* Student Name Badge */}
           <div className="text-right mb-2">
             <span className="bg-white rounded-full px-4 py-2 text-pink-600 font-semibold shadow-md">
               👩‍🎓 {studentName}'s Study Time
@@ -466,7 +464,6 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* Welcome Banner */}
           <div className="text-center mb-6">
             <div className="inline-block bg-white rounded-full p-4 shadow-lg mb-4">
               <span className="text-6xl">🌟👩‍🎓🌸</span>
@@ -525,7 +522,6 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* Student Name Badge */}
           <div className="text-right mb-2">
             <span className="bg-white rounded-full px-4 py-2 text-pink-600 font-semibold shadow-md">
               👩‍🎓 {studentName}'s Study Time

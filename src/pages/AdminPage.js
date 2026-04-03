@@ -10,7 +10,6 @@ const AdminPage = () => {
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // Form states for adding questions
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     options: ['', '', '', ''],
@@ -25,35 +24,34 @@ const AdminPage = () => {
   const [batchQuestions, setBatchQuestions] = useState('');
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  const ADMIN_PASSWORD = 'admin123'; // Change this to your own password
-
-  const API_URL = 'http://localhost:5000/api/admin';
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      if (activeTab === 'dashboard') {
-        const statsRes = await axios.get(`${API_URL}/statistics`);
-        if (statsRes.data.success) setStatistics(statsRes.data.data);
-      } else if (activeTab === 'questions') {
-        const questionsRes = await axios.get(`${API_URL}/questions`);
-        if (questionsRes.data.success) setQuestions(questionsRes.data.data);
-      } else if (activeTab === 'progress') {
-        const progressRes = await axios.get(`${API_URL}/progress`);
-        if (progressRes.data.success) setProgress(progressRes.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setMessage({ text: 'Error fetching data', type: 'error' });
-    }
-    setLoading(false);
-  };
+  const ADMIN_PASSWORD = 'admin123';
+  const API_URL = 'https://study-game-backend-1-production.up.railway.app/api/admin';
 
   useEffect(() => {
-  if (isLoggedIn && activeTab !== 'add') {
-    fetchData();
-  }
-}, [isLoggedIn, activeTab, fetchData]);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        if (activeTab === 'dashboard') {
+          const statsRes = await axios.get(`${API_URL}/statistics`);
+          if (statsRes.data.success) setStatistics(statsRes.data.data);
+        } else if (activeTab === 'questions') {
+          const questionsRes = await axios.get(`${API_URL}/questions`);
+          if (questionsRes.data.success) setQuestions(questionsRes.data.data);
+        } else if (activeTab === 'progress') {
+          const progressRes = await axios.get(`${API_URL}/progress`);
+          if (progressRes.data.success) setProgress(progressRes.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setMessage({ text: 'Error fetching data', type: 'error' });
+      }
+      setLoading(false);
+    };
+
+    if (isLoggedIn && activeTab !== 'add') {
+      fetchData();
+    }
+  }, [isLoggedIn, activeTab, API_URL]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -82,7 +80,8 @@ const AdminPage = () => {
           explanation: '',
           simpleTip: ''
         });
-        fetchData();
+        const questionsRes = await axios.get(`${API_URL}/questions`);
+        if (questionsRes.data.success) setQuestions(questionsRes.data.data);
       }
     } catch (error) {
       setMessage({ text: 'Error adding question', type: 'error' });
@@ -107,7 +106,8 @@ const AdminPage = () => {
       if (response.data.success) {
         setMessage({ text: response.data.message, type: 'success' });
         setBatchQuestions('');
-        fetchData();
+        const questionsRes = await axios.get(`${API_URL}/questions`);
+        if (questionsRes.data.success) setQuestions(questionsRes.data.data);
       }
     } catch (error) {
       setMessage({ text: 'Error uploading batch', type: 'error' });
@@ -121,7 +121,8 @@ const AdminPage = () => {
         const response = await axios.delete(`${API_URL}/questions/${id}`);
         if (response.data.success) {
           setMessage({ text: response.data.message, type: 'success' });
-          fetchData();
+          const questionsRes = await axios.get(`${API_URL}/questions`);
+          if (questionsRes.data.success) setQuestions(questionsRes.data.data);
         }
       } catch (error) {
         setMessage({ text: 'Error deleting question', type: 'error' });
@@ -166,7 +167,6 @@ const AdminPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
       <div className="bg-blue-600 text-white p-4">
         <div className="container mx-auto">
           <h1 className="text-2xl font-bold">📊 Admin Dashboard</h1>
@@ -174,7 +174,6 @@ const AdminPage = () => {
         </div>
       </div>
       
-      {/* Tabs */}
       <div className="bg-white shadow-md">
         <div className="container mx-auto flex flex-wrap gap-2 p-2">
           <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>📈 Dashboard</button>
@@ -185,7 +184,6 @@ const AdminPage = () => {
         </div>
       </div>
       
-      {/* Content */}
       <div className="container mx-auto p-4">
         {message.text && (
           <div className={`mb-4 p-3 rounded ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -194,7 +192,6 @@ const AdminPage = () => {
           </div>
         )}
         
-        {/* Dashboard Tab */}
         {activeTab === 'dashboard' && statistics && (
           <div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -223,7 +220,7 @@ const AdminPage = () => {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-bold mb-4">📊 Performance by Subject</h2>
               <div className="space-y-3">
-                {statistics.subjectStats.map((subject, index) => (
+                {statistics.subjectStats && statistics.subjectStats.map((subject, index) => (
                   <div key={index}>
                     <div className="flex justify-between mb-1">
                       <span className="font-semibold">{subject._id}</span>
@@ -239,12 +236,11 @@ const AdminPage = () => {
           </div>
         )}
         
-        {/* Questions Tab */}
         {activeTab === 'questions' && (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between mb-4">
               <h2 className="text-xl font-bold">📚 All Questions ({questions.length})</h2>
-              <button onClick={fetchData} className="bg-blue-500 text-white px-4 py-2 rounded">Refresh</button>
+              <button onClick={() => window.location.reload()} className="bg-blue-500 text-white px-4 py-2 rounded">Refresh</button>
             </div>
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {questions.map((q, index) => (
@@ -271,7 +267,6 @@ const AdminPage = () => {
           </div>
         )}
         
-        {/* Add Single Question Tab */}
         {activeTab === 'add' && (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">➕ Add New Question</h2>
@@ -331,7 +326,6 @@ const AdminPage = () => {
           </div>
         )}
         
-        {/* Batch Upload Tab */}
         {activeTab === 'batch' && (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">📦 Batch Upload Questions</h2>
@@ -344,20 +338,8 @@ const AdminPage = () => {
     "options": ["Lusaka", "Ndola", "Kitwe", "Livingstone"],
     "correct": 0,
     "subject": "Social Studies",
-    "topic": "Geography",
-    "difficulty": "easy",
     "explanation": "Lusaka is the capital city of Zambia!",
     "simpleTip": "Lusaka starts with L like capital!"
-  },
-  {
-    "question": "15 + 27 = ?",
-    "options": ["32", "42", "52", "62"],
-    "correct": 1,
-    "subject": "Mathematics",
-    "topic": "Addition",
-    "difficulty": "easy",
-    "explanation": "15 + 27 = 42. Add tens first: 10+20=30, then ones: 5+7=12, total 42!",
-    "simpleTip": "Add ones first, then tens"
   }
 ]`}
               </pre>
@@ -366,7 +348,7 @@ const AdminPage = () => {
             <form onSubmit={handleBatchUpload}>
               <div className="mb-4">
                 <label className="block text-gray-700 mb-2">Paste your JSON questions here:</label>
-                <textarea value={batchQuestions} onChange={(e) => setBatchQuestions(e.target.value)} required rows="15" className="w-full p-3 border rounded-lg font-mono text-sm" placeholder='Paste your JSON array here...'></textarea>
+                <textarea value={batchQuestions} onChange={(e) => setBatchQuestions(e.target.value)} required rows="10" className="w-full p-3 border rounded-lg font-mono text-sm" placeholder='Paste your JSON array here...'></textarea>
               </div>
               <button type="submit" disabled={loading} className="bg-purple-600 text-white p-3 rounded-lg w-full hover:bg-purple-700">
                 {loading ? 'Uploading...' : '📦 Upload Batch'}
@@ -375,12 +357,11 @@ const AdminPage = () => {
           </div>
         )}
         
-        {/* Progress Tab */}
         {activeTab === 'progress' && (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between mb-4">
               <h2 className="text-xl font-bold">📊 Student Progress ({progress.length} answers)</h2>
-              <button onClick={fetchData} className="bg-blue-500 text-white px-4 py-2 rounded">Refresh</button>
+              <button onClick={() => window.location.reload()} className="bg-blue-500 text-white px-4 py-2 rounded">Refresh</button>
             </div>
             
             <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -397,20 +378,9 @@ const AdminPage = () => {
                     <div>Student answered: <span className="font-semibold">{String.fromCharCode(65 + p.studentAnswer)}. {p.question?.options?.[p.studentAnswer] || 'N/A'}</span></div>
                     <div>Correct answer: <span className="font-semibold text-green-600">{String.fromCharCode(65 + p.correctAnswer)}. {p.question?.options?.[p.correctAnswer] || 'N/A'}</span></div>
                     <div>Time spent: <span className="font-semibold">{formatTime(p.timeSpent)}</span></div>
-                    <div>Subject: <span className="font-semibold">{p.subject}</span></div>
                   </div>
-                  {!p.isCorrect && p.question?.explanation && (
-                    <div className="mt-2 p-2 bg-yellow-100 rounded text-sm">
-                      📚 {p.question.explanation}
-                    </div>
-                  )}
                 </div>
               ))}
-              {progress.length === 0 && !loading && (
-                <div className="text-center text-gray-500 py-8">
-                  No progress recorded yet. Student hasn't answered any questions.
-                </div>
-              )}
             </div>
           </div>
         )}
