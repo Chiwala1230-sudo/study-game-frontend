@@ -7,6 +7,7 @@ import StudyTimer from '../components/Game/StudyTimer';
 import FinancialTracker from '../components/Game/FinancialTracker';
 import { fetchQuestions, recordCorrect, recordWrong, saveProgress } from '../services/api';
 import { getSmartRotation, calculateDailyReward } from '../utils/smartRotation';
+import soundService from '../services/soundService';
 
 const GamePage = () => {
   const [gameMode, setGameMode] = useState('smart-rotation-required');
@@ -21,6 +22,7 @@ const GamePage = () => {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   const [smartRotationSubjects, setSmartRotationSubjects] = useState([]);
   const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
@@ -51,6 +53,15 @@ const GamePage = () => {
 
   const studentName = "Perez";
 
+  // Track level changes for sound
+  const prevLevelRef = React.useRef(level);
+  useEffect(() => {
+    if (prevLevelRef.current !== level && level !== 'Novice') {
+      soundService.play('levelup');
+    }
+    prevLevelRef.current = level;
+  }, [level]);
+
   useEffect(() => {
     const savedBalance = localStorage.getItem('studyBalance');
     if (savedBalance) setBalance(parseInt(savedBalance));
@@ -61,6 +72,11 @@ const GamePage = () => {
     const rotation = getSmartRotation(weakSubjects, ['math', 'science', 'english', 'social', 'ct']);
     setSmartRotationSubjects(rotation);
   }, [weakSubjects]);
+
+  const toggleSound = () => {
+    const enabled = soundService.toggle();
+    setSoundEnabled(enabled);
+  };
 
   const loadQuestionsForSubject = async (subjectId) => {
     setLoading(true);
@@ -88,6 +104,7 @@ const GamePage = () => {
   };
 
   const handleStartSmartRotation = () => {
+    soundService.play('click');
     console.log("🚀 Starting Smart Rotation");
     if (smartRotationSubjects.length > 0) {
       setSmartRotationScore(0);
@@ -102,6 +119,7 @@ const GamePage = () => {
   };
 
   const handleSelectSubject = async (subjectId) => {
+    soundService.play('click');
     console.log(`🎯 Free roam - selecting subject: ${subjectId}`);
     if (!smartRotationCompleted) {
       alert('⚠️ You must complete Smart Rotation first!');
@@ -115,6 +133,7 @@ const GamePage = () => {
   };
 
   const handleSelectRandom = async () => {
+    soundService.play('click');
     console.log(`🎲 Free roam - selecting random questions`);
     if (!smartRotationCompleted) {
       alert('⚠️ You must complete Smart Rotation first!');
@@ -235,6 +254,14 @@ const GamePage = () => {
     
     const isCorrect = answerIndex === currentQuestion.correct;
     setIsCorrectAnswer(isCorrect);
+    
+    // Play sound based on answer
+    if (isCorrect) {
+      soundService.play('correct');
+    } else {
+      soundService.play('wrong');
+    }
+    
     const pointsEarned = calculatePoints(isCorrect);
     
     // Save progress to database
@@ -298,6 +325,7 @@ const GamePage = () => {
   };
 
   const handleNextQuestion = () => {
+    soundService.play('click');
     if (currentQuestionIndex + 1 < questions.length) {
       setCurrentQuestionIndex(prev => prev + 1);
       setSelectedAnswer(null);
@@ -314,6 +342,7 @@ const GamePage = () => {
   };
 
   const handleTimerComplete = () => {
+    soundService.play('levelup');
     alert(`🎉 Congratulations ${studentName}! You completed your 2-hour study session! 🌟`);
   };
 
@@ -338,6 +367,13 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
+          {/* Sound Toggle Button */}
+          <div className="text-right mb-2">
+            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 sm:px-4 sm:py-2 shadow-md text-sm sm:text-base">
+              {soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
+            </button>
+          </div>
+          
           <div className="text-center mb-4 sm:mb-6">
             <div className="inline-block bg-white rounded-full p-3 sm:p-4 shadow-lg mb-2 sm:mb-4">
               <span className="text-4xl sm:text-6xl">👩‍🎓✨</span>
@@ -365,7 +401,6 @@ const GamePage = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-purple-800 mb-2">Smart Rotation Required!</h2>
               <p className="text-purple-700 text-sm sm:text-base mb-3 sm:mb-4">
                 Complete today's smart rotation to unlock all subjects, {studentName}! 🎀
-                <br />This focuses on your weakest subjects to help you shine brighter!
               </p>
               <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 shadow-md">
                 <h3 className="font-bold text-pink-600 text-sm sm:text-base mb-2">Today's Subjects:</h3>
@@ -409,10 +444,13 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="text-right mb-2">
+          <div className="flex justify-between items-center mb-2">
             <span className="bg-white rounded-full px-3 sm:px-4 py-1 sm:py-2 text-pink-600 font-semibold shadow-md text-xs sm:text-sm">
               👩‍🎓 {studentName}'s Study Time
             </span>
+            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 shadow-md text-sm">
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
           </div>
           
           <FinancialTracker 
@@ -479,6 +517,12 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
+          <div className="text-right mb-2">
+            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 shadow-md text-sm">
+              {soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
+            </button>
+          </div>
+          
           <div className="text-center mb-4 sm:mb-6">
             <div className="inline-block bg-white rounded-full p-3 sm:p-4 shadow-lg mb-2 sm:mb-4">
               <span className="text-4xl sm:text-6xl">🌟👩‍🎓🌸</span>
@@ -537,10 +581,13 @@ const GamePage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="text-right mb-2">
+          <div className="flex justify-between items-center mb-2">
             <span className="bg-white rounded-full px-3 sm:px-4 py-1 sm:py-2 text-pink-600 font-semibold shadow-md text-xs sm:text-sm">
               👩‍🎓 {studentName}'s Study Time
             </span>
+            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 shadow-md text-sm">
+              {soundEnabled ? '🔊' : '🔇'}
+            </button>
           </div>
           
           <FinancialTracker 
