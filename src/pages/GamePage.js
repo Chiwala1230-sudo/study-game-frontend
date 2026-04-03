@@ -5,7 +5,7 @@ import LevelProgress from '../components/Game/LevelProgress';
 import SubjectSelector from '../components/Game/SubjectSelector';
 import StudyTimer from '../components/Game/StudyTimer';
 import FinancialTracker from '../components/Game/FinancialTracker';
-import { fetchQuestions, recordCorrect, recordWrong } from '../services/api';
+import { fetchQuestions, recordCorrect, recordWrong, saveProgress } from '../services/api';
 import { getSmartRotation, calculateDailyReward } from '../utils/smartRotation';
 
 const GamePage = () => {
@@ -237,6 +237,21 @@ const GamePage = () => {
     setIsCorrectAnswer(isCorrect);
     const pointsEarned = calculatePoints(isCorrect);
     
+    // Save progress to database
+    const progressData = {
+      studentName: studentName,
+      subject: currentSubject || currentQuestion.subject,
+      questionId: currentQuestion._id,
+      question: currentQuestion,
+      studentAnswer: answerIndex,
+      correctAnswer: currentQuestion.correct,
+      isCorrect: isCorrect,
+      timeSpent: 30,
+      timestamp: new Date()
+    };
+    
+    await saveProgress(progressData);
+    
     if (isCorrect) {
       setScore(prevScore => {
         const newScore = prevScore + pointsEarned;
@@ -321,14 +336,14 @@ const GamePage = () => {
   // SMART ROTATION REQUIRED SCREEN
   if (gameMode === 'smart-rotation-required') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-6">
-            <div className="inline-block bg-white rounded-full p-4 shadow-lg mb-4">
-              <span className="text-6xl">👩‍🎓✨</span>
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="inline-block bg-white rounded-full p-3 sm:p-4 shadow-lg mb-2 sm:mb-4">
+              <span className="text-4xl sm:text-6xl">👩‍🎓✨</span>
             </div>
-            <h1 className="text-4xl font-bold text-purple-700 mb-2">Welcome, Perez! 🌸</h1>
-            <p className="text-pink-600 text-lg">Your learning adventure begins here!</p>
+            <h1 className="text-2xl sm:text-4xl font-bold text-purple-700 mb-1 sm:mb-2">Welcome, Perez! 🌸</h1>
+            <p className="text-pink-600 text-sm sm:text-lg">Your learning adventure begins here!</p>
           </div>
           
           <FinancialTracker 
@@ -344,25 +359,25 @@ const GamePage = () => {
             onBreak={handleBreak}
           />
           
-          <div className="bg-gradient-to-r from-pink-200 to-purple-200 border-l-4 border-pink-500 p-6 rounded-2xl mb-6 shadow-lg">
+          <div className="bg-gradient-to-r from-pink-200 to-purple-200 border-l-4 border-pink-500 p-4 sm:p-6 rounded-xl sm:rounded-2xl mb-4 sm:mb-6 shadow-lg">
             <div className="text-center">
-              <div className="text-6xl mb-4">⭐⚡🌸</div>
-              <h2 className="text-2xl font-bold text-purple-800 mb-2">Smart Rotation Required!</h2>
-              <p className="text-purple-700 mb-4">
+              <div className="text-4xl sm:text-6xl mb-2 sm:mb-4">⭐⚡🌸</div>
+              <h2 className="text-xl sm:text-2xl font-bold text-purple-800 mb-2">Smart Rotation Required!</h2>
+              <p className="text-purple-700 text-sm sm:text-base mb-3 sm:mb-4">
                 Complete today's smart rotation to unlock all subjects, {studentName}! 🎀
                 <br />This focuses on your weakest subjects to help you shine brighter!
               </p>
-              <div className="bg-white rounded-xl p-4 mb-4 shadow-md">
-                <h3 className="font-bold text-pink-600 mb-2">Today's Subjects:</h3>
+              <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 shadow-md">
+                <h3 className="font-bold text-pink-600 text-sm sm:text-base mb-2">Today's Subjects:</h3>
                 {smartRotationSubjects.map((subject, index) => (
-                  <div key={index} className="text-left text-gray-700 mb-2">
+                  <div key={index} className="text-left text-gray-700 text-sm sm:text-base mb-1 sm:mb-2">
                     {index + 1}. {subject.subject.toUpperCase()} - {subject.reason}
                   </div>
                 ))}
               </div>
               <button
                 onClick={handleStartSmartRotation}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-3 px-6 rounded-full transition-all transform hover:scale-105 shadow-lg"
+                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-full transition-all transform hover:scale-105 shadow-lg text-sm sm:text-base"
               >
                 Start Smart Rotation ({smartRotationSubjects.length} subjects) 🚀
               </button>
@@ -377,12 +392,12 @@ const GamePage = () => {
   if (gameMode === 'smart-rotation-playing') {
     if (loading || questions.length === 0) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
+        <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
           <div className="container mx-auto max-w-4xl text-center">
-            <div className="bg-white rounded-2xl p-8 shadow-xl">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-pink-500 mx-auto mb-4"></div>
-              <h2 className="text-2xl font-bold text-purple-700 mb-2">Loading questions...</h2>
-              <p className="text-pink-600">Just a moment, {studentName}! ✨</p>
+            <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-xl">
+              <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-pink-500 mx-auto mb-3 sm:mb-4"></div>
+              <h2 className="text-xl sm:text-2xl font-bold text-purple-700 mb-2">Loading questions...</h2>
+              <p className="text-pink-600 text-sm sm:text-base">Just a moment, {studentName}! ✨</p>
             </div>
           </div>
         </div>
@@ -392,10 +407,10 @@ const GamePage = () => {
     const currentQ = questions[currentQuestionIndex];
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-right mb-2">
-            <span className="bg-white rounded-full px-4 py-2 text-pink-600 font-semibold shadow-md">
+            <span className="bg-white rounded-full px-3 sm:px-4 py-1 sm:py-2 text-pink-600 font-semibold shadow-md text-xs sm:text-sm">
               👩‍🎓 {studentName}'s Study Time
             </span>
           </div>
@@ -413,11 +428,11 @@ const GamePage = () => {
             onBreak={handleBreak}
           />
           
-          <div className="bg-gradient-to-r from-purple-200 to-pink-200 border-l-4 border-purple-500 p-4 mb-4 rounded-xl shadow-md">
-            <p className="text-purple-800 font-semibold">
+          <div className="bg-gradient-to-r from-purple-200 to-pink-200 border-l-4 border-purple-500 p-3 sm:p-4 mb-3 sm:mb-4 rounded-lg sm:rounded-xl shadow-md">
+            <p className="text-purple-800 font-semibold text-sm sm:text-base">
               🎯 Smart Rotation: {currentSubjectIndex + 1} of {smartRotationSubjects.length}
             </p>
-            <p className="text-sm text-pink-700">
+            <p className="text-xs sm:text-sm text-pink-700">
               Current: {currentSubject?.toUpperCase()} 
             </p>
           </div>
@@ -435,7 +450,7 @@ const GamePage = () => {
           />
           
           {feedbackMessage && (
-            <div className={`mb-4 p-3 rounded-xl text-center font-semibold animate-bounce ${
+            <div className={`mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg sm:rounded-xl text-center font-semibold text-sm sm:text-base ${
               isCorrectAnswer ? 'bg-green-100 text-green-800 border-l-4 border-green-500' : 'bg-red-100 text-red-800 border-l-4 border-red-500'
             }`}>
               {feedbackMessage}
@@ -451,7 +466,7 @@ const GamePage = () => {
             isCorrect={isCorrectAnswer}
           />
           
-          <div className="mt-6 text-center text-sm text-purple-600">
+          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-purple-600">
             Question {currentQuestionIndex + 1} of {questions.length} 📚
           </div>
         </div>
@@ -462,14 +477,14 @@ const GamePage = () => {
   // FREE ROAM - SUBJECT SELECTION SCREEN
   if (gameMode === 'free-roam') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-6">
-            <div className="inline-block bg-white rounded-full p-4 shadow-lg mb-4">
-              <span className="text-6xl">🌟👩‍🎓🌸</span>
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="inline-block bg-white rounded-full p-3 sm:p-4 shadow-lg mb-2 sm:mb-4">
+              <span className="text-4xl sm:text-6xl">🌟👩‍🎓🌸</span>
             </div>
-            <h1 className="text-3xl font-bold text-purple-700 mb-1">Great job, Perez! 🎉</h1>
-            <p className="text-pink-600">You completed your Smart Rotation! Now choose any subject to study! 📖</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-purple-700 mb-1">Great job, Perez! 🎉</h1>
+            <p className="text-pink-600 text-sm sm:text-base">You completed your Smart Rotation! Now choose any subject to study! 📖</p>
           </div>
           
           <FinancialTracker 
@@ -486,8 +501,8 @@ const GamePage = () => {
           />
           
           {dailyScore !== null && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-green-100 to-emerald-100 border-l-4 border-green-500 rounded-xl shadow-md">
-              <p className="text-green-800 font-semibold">
+            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-gradient-to-r from-green-100 to-emerald-100 border-l-4 border-green-500 rounded-lg sm:rounded-xl shadow-md">
+              <p className="text-green-800 font-semibold text-sm sm:text-base">
                 ✅ Smart Rotation Complete! Today's Score: {dailyScore.toFixed(1)}%
               </p>
             </div>
@@ -506,11 +521,11 @@ const GamePage = () => {
   if (gameMode === 'free-roam-playing') {
     if (loading || questions.length === 0) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
+        <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
           <div className="container mx-auto max-w-4xl text-center">
-            <div className="bg-white rounded-2xl p-8 shadow-xl">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-pink-500 mx-auto mb-4"></div>
-              <h2 className="text-2xl font-bold text-purple-700">Loading questions...</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-xl">
+              <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-pink-500 mx-auto mb-3 sm:mb-4"></div>
+              <h2 className="text-xl sm:text-2xl font-bold text-purple-700">Loading questions...</h2>
             </div>
           </div>
         </div>
@@ -520,10 +535,10 @@ const GamePage = () => {
     const currentQ = questions[currentQuestionIndex];
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-right mb-2">
-            <span className="bg-white rounded-full px-4 py-2 text-pink-600 font-semibold shadow-md">
+            <span className="bg-white rounded-full px-3 sm:px-4 py-1 sm:py-2 text-pink-600 font-semibold shadow-md text-xs sm:text-sm">
               👩‍🎓 {studentName}'s Study Time
             </span>
           </div>
@@ -541,13 +556,13 @@ const GamePage = () => {
             onBreak={handleBreak}
           />
           
-          <div className="bg-gradient-to-r from-green-200 to-emerald-200 border-l-4 border-green-500 p-4 mb-4 rounded-xl shadow-md">
-            <p className="text-green-800 font-semibold">
+          <div className="bg-gradient-to-r from-green-200 to-emerald-200 border-l-4 border-green-500 p-3 sm:p-4 mb-3 sm:mb-4 rounded-lg sm:rounded-xl shadow-md">
+            <p className="text-green-800 font-semibold text-sm sm:text-base">
               🎓 Free Roam Mode - Choose any subject you want!
             </p>
             <button
               onClick={() => setGameMode('free-roam')}
-              className="mt-2 text-sm bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition-all"
+              className="mt-1 sm:mt-2 text-xs sm:text-sm bg-green-500 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-full hover:bg-green-600 transition-all"
             >
               ← Change Subject
             </button>
@@ -566,7 +581,7 @@ const GamePage = () => {
           />
           
           {feedbackMessage && (
-            <div className={`mb-4 p-3 rounded-xl text-center font-semibold ${
+            <div className={`mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg sm:rounded-xl text-center font-semibold text-sm sm:text-base ${
               isCorrectAnswer ? 'bg-green-100 text-green-800 border-l-4 border-green-500' : 'bg-red-100 text-red-800 border-l-4 border-red-500'
             }`}>
               {feedbackMessage}
@@ -582,7 +597,7 @@ const GamePage = () => {
             isCorrect={isCorrectAnswer}
           />
           
-          <div className="mt-6 text-center text-sm text-purple-600">
+          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-purple-600">
             Question {currentQuestionIndex + 1} of {questions.length} 📚
           </div>
         </div>

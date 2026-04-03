@@ -1,12 +1,10 @@
 import axios from 'axios';
-
 import API_URL from '../config';
 
 export const fetchQuestions = async (subject = null) => {
   try {
     let url = `${API_URL}/questions`;
     if (subject && subject !== 'random') {
-      // Map subject names correctly
       const subjectMap = {
         'math': 'Mathematics',
         'english': 'English', 
@@ -24,7 +22,6 @@ export const fetchQuestions = async (subject = null) => {
     console.log(`📡 Fetching: ${url}`);
     const response = await axios.get(url);
     
-    // Handle different response formats
     let questions = [];
     if (Array.isArray(response.data)) {
       questions = response.data;
@@ -34,7 +31,7 @@ export const fetchQuestions = async (subject = null) => {
       questions = [];
     }
     
-    console.log(`✅ Got ${questions.length} questions for ${subject || 'all'}`);
+    console.log(`✅ Got ${questions.length} questions`);
     return questions;
     
   } catch (error) {
@@ -59,6 +56,17 @@ export const recordCorrect = async (id) => {
     return response.data;
   } catch (error) {
     console.error('Error recording correct answer:', error);
+    return null;
+  }
+};
+
+export const saveProgress = async (progressData) => {
+  try {
+    const response = await axios.post(`${API_URL}/progress`, progressData);
+    console.log('Progress saved:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving progress:', error);
     return null;
   }
 };
