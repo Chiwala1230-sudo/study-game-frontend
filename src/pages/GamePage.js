@@ -34,12 +34,12 @@ const GamePage = () => {
   const [todayEarned, setTodayEarned] = useState(0);
   const [todayPenalty, setTodayPenalty] = useState(0);
   const [dailyScore, setDailyScore] = useState(null);
-  const [thresholds, setThresholds] = useState({
+  const [thresholds] = useState({
     highScore: 80,
     lowScore: 40,
     highReward: 5,
     lowPenalty: 5
-  });
+});
   
   const [weakSubjects, setWeakSubjects] = useState([
     { subject: 'math', wrongCount: 0, wrongRate: 0 },

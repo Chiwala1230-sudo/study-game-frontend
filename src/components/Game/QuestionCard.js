@@ -34,12 +34,12 @@ const QuestionCard = ({
         {question.options && question.options.map((option, index) => {
           const optionIndex = index;
           const isSelected = selectedAnswer === optionIndex;
-          const isCorrectAnswer = isCorrect && isSelected;
-          const isWrongAnswer = showResult && isSelected && !isCorrect;
+          const isCorrectAnswer = showResult && optionIndex === question.correct;
+          const isWrongAnswer = showResult && isSelected && !isCorrectAnswer;
           
           let buttonClass = "w-full text-left p-4 rounded-xl border-2 transition-all transform hover:scale-102 ";
           
-          if (showResult && optionIndex === question.correct) {
+          if (isCorrectAnswer) {
             buttonClass += "bg-gradient-to-r from-green-100 to-emerald-100 border-green-500 text-green-800 shadow-md";
           } else if (isWrongAnswer) {
             buttonClass += "bg-gradient-to-r from-red-100 to-pink-100 border-red-500 text-red-800";
@@ -61,7 +61,7 @@ const QuestionCard = ({
             >
               <div className="flex items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3 ${
-                  showResult && optionIndex === question.correct ? 'bg-green-500 text-white' :
+                  isCorrectAnswer ? 'bg-green-500 text-white' :
                   isWrongAnswer ? 'bg-red-500 text-white' :
                   isSelected ? 'bg-purple-500 text-white' :
                   'bg-pink-100 text-pink-600'

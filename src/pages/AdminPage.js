@@ -50,10 +50,10 @@ const AdminPage = () => {
   };
 
   useEffect(() => {
-    if (isLoggedIn && activeTab !== 'add') {
-      fetchData();
-    }
-  }, [isLoggedIn, activeTab]);
+  if (isLoggedIn && activeTab !== 'add') {
+    fetchData();
+  }
+}, [isLoggedIn, activeTab, fetchData]);
 
   const handleLogin = (e) => {
     e.preventDefault();
