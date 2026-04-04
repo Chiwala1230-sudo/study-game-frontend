@@ -15,7 +15,7 @@ function GamePage({ student, token, onLogout }) {
   const [selectedOption, setSelectedOption] = useState(null);
   const [disabled, setDisabled] = useState(false);
   
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true); // CHANGED: starts as true
   const audioRef = useRef(null);
   
   const playSound = (type) => {
@@ -30,16 +30,21 @@ function GamePage({ student, token, onLogout }) {
   
   const toggleMusic = () => {
     if (audioRef.current) {
-      if (isMusicPlaying) audioRef.current.pause();
-      else audioRef.current.play().catch(e => console.log('Music error:', e));
+      if (isMusicPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(e => console.log('Music error:', e));
+      }
       setIsMusicPlaying(!isMusicPlaying);
     }
   };
   
   useEffect(() => {
+    // Music starts automatically
     audioRef.current = new Audio('/sounds/background-music.mp3');
     audioRef.current.loop = true;
     audioRef.current.volume = 0.3;
+    audioRef.current.play().catch(e => console.log('Music autoplay error:', e));
     return () => { if (audioRef.current) audioRef.current.pause(); };
   }, []);
   
@@ -182,6 +187,15 @@ function GamePage({ student, token, onLogout }) {
     return '💖';
   };
   
+  // NEW: All 5 subjects with emojis
+  const allSubjects = [
+    { name: 'Mathematics', emoji: '🔢', icon: '➕' },
+    { name: 'English', emoji: '📚', icon: '✨' },
+    { name: 'Science', emoji: '🔬', icon: '🧪' },
+    { name: 'Social Studies', emoji: '🌍', icon: '🗺️' },
+    { name: 'Creative Arts', emoji: '🎨', icon: '🖌️' }
+  ];
+  
   if (loading) {
     return (
       <div style={styles.loading}>
@@ -193,7 +207,7 @@ function GamePage({ student, token, onLogout }) {
   
   return (
     <div style={styles.container}>
-      {/* Music Button */}
+      {/* Music Button - shows mute/unmute */}
       <button onClick={toggleMusic} style={styles.musicButton}>
         {isMusicPlaying ? '🎵' : '🎵🔇'}
       </button>
@@ -207,7 +221,7 @@ function GamePage({ student, token, onLogout }) {
         <button onClick={onLogout} style={styles.logoutButton}>🚪 Goodbye</button>
       </div>
       
-      {/* Stats Row - Girly Cards */}
+      {/* Stats Row */}
       <div style={styles.statsGrid}>
         <div style={styles.statBox}>
           <div style={styles.statEmoji}>⭐</div>
@@ -226,7 +240,7 @@ function GamePage({ student, token, onLogout }) {
         </div>
       </div>
       
-      {/* Progress Bar - Girly */}
+      {/* Progress Bar */}
       <div style={styles.progressContainer}>
         <div style={styles.progressLabel}>💖 Journey to Grandmaster 💖</div>
         <div style={styles.progressBar}>
@@ -235,7 +249,7 @@ function GamePage({ student, token, onLogout }) {
         <div style={styles.progressText}>{score}/1000 Sparkle Points ✨</div>
       </div>
       
-      {/* Feedback Toast - Girly */}
+      {/* Feedback Toast */}
       {answerFeedback.show && (
         <div style={{
           ...styles.toast,
@@ -250,31 +264,27 @@ function GamePage({ student, token, onLogout }) {
         </div>
       )}
       
-      {/* Subject Selector - Girly */}
+      {/* Subject Selector - NOW WITH 5 SUBJECTS */}
       <div style={styles.subjectsContainer}>
-        {['Mathematics', 'English', 'Science'].map(subj => (
+        {allSubjects.map(subj => (
           <button
-            key={subj}
-            onClick={() => setSelectedSubject(subj)}
+            key={subj.name}
+            onClick={() => setSelectedSubject(subj.name)}
             style={{
               ...styles.subjectButton,
-              background: selectedSubject === subj 
+              background: selectedSubject === subj.name 
                 ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
                 : 'white',
-              color: selectedSubject === subj ? 'white' : '#d63384',
-              border: selectedSubject === subj ? 'none' : '2px solid #f0a6ca'
+              color: selectedSubject === subj.name ? 'white' : '#d63384',
+              border: selectedSubject === subj.name ? 'none' : '2px solid #f0a6ca'
             }}
           >
-            {subj === 'Mathematics' && '🔢'} {subj === 'English' && '📚'} {subj === 'Science' && '🔬'}
-            <span style={{marginLeft: '8px'}}>{subj}</span>
-            {subj === 'Mathematics' && ' ➕'}
-            {subj === 'English' && ' ✨'}
-            {subj === 'Science' && ' 🧪'}
+            {subj.emoji} {subj.name} {subj.icon}
           </button>
         ))}
       </div>
       
-      {/* Question Card - Girly */}
+      {/* Question Card */}
       <div style={styles.questionCard}>
         <div style={styles.questionMeta}>
           <span style={styles.subjectTag}>💜 {currentQuestion?.subject} 💜</span>
@@ -312,7 +322,7 @@ function GamePage({ student, token, onLogout }) {
         </div>
       </div>
       
-      {/* Progress Stats - Girly */}
+      {/* Progress Stats */}
       {stats && (
         <div style={styles.progressStats}>
           <div style={styles.progressStatItem}>
@@ -469,22 +479,24 @@ const styles = {
     opacity: 0.95
   },
   subjectsContainer: {
-    display: 'flex',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
     gap: '10px',
     marginBottom: '20px'
   },
   subjectButton: {
-    flex: 1,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '12px',
+    padding: '10px',
     borderRadius: '30px',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: '500',
     cursor: 'pointer',
     transition: 'all 0.2s',
-    boxShadow: '0 2px 8px rgba(240, 166, 202, 0.2)'
+    boxShadow: '0 2px 8px rgba(240, 166, 202, 0.2)',
+    gap: '5px',
+    whiteSpace: 'nowrap'
   },
   questionCard: {
     background: 'white',
@@ -594,6 +606,12 @@ styleSheet.textContent = `
   }
   button:hover {
     transform: scale(1.02);
+  }
+  @media (max-width: 600px) {
+    button[style*="white-space: nowrap"] {
+      white-space: normal !important;
+      font-size: 11px !important;
+    }
   }
 `;
 document.head.appendChild(styleSheet);
