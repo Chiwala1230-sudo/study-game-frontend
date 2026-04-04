@@ -98,10 +98,17 @@ function GamePage({ student, token, onLogout }) {
     loadQuestions();
   }, [selectedSubject]);
   
-  const handleAnswer = async (answer) => {
+  const handleAnswer = async (answer, optionIndex) => {
     if (!currentQuestion) return;
     
-    const isCorrect = answer === currentQuestion.correctAnswer;
+    // Check if correct using either format
+    let isCorrect = false;
+    if (currentQuestion.correctAnswer) {
+      isCorrect = answer === currentQuestion.correctAnswer;
+    } else if (currentQuestion.correct !== undefined) {
+      isCorrect = optionIndex === currentQuestion.correct;
+    }
+    
     const deviceInfo = getDeviceInfo();
     
     if (isCorrect) playSound('correct');
@@ -115,7 +122,7 @@ function GamePage({ student, token, onLogout }) {
         subject: currentQuestion.subject,
         isCorrect,
         answerGiven: answer,
-        correctAnswer: currentQuestion.correctAnswer,
+        correctAnswer: currentQuestion.correctAnswer || currentQuestion.options[currentQuestion.correct],
         deviceInfo,
         sessionId
       });
@@ -175,12 +182,12 @@ function GamePage({ student, token, onLogout }) {
               <div>
                 <div style={styles.questionHeader}>
                   <span style={styles.subjectBadge}>{currentQuestion.subject}</span>
-                  <span style={styles.difficultyBadge}>{currentQuestion.difficulty}</span>
+                  <span style={styles.difficultyBadge}>{currentQuestion.difficulty || 'Medium'}</span>
                 </div>
                 <h2 style={styles.questionText}>{currentQuestion.text}</h2>
                 <div style={styles.optionsGrid}>
                   {currentQuestion.options.map((option, idx) => (
-                    <button key={idx} onClick={() => handleAnswer(option)} style={styles.optionButton}>
+                    <button key={idx} onClick={() => handleAnswer(option, idx)} style={styles.optionButton}>
                       {option}
                     </button>
                   ))}
