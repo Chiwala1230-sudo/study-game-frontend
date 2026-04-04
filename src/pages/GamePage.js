@@ -12,7 +12,7 @@ function GamePage({ student, token, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
   const [answerFeedback, setAnswerFeedback] = useState({ show: false, isCorrect: false, message: '', explanation: '' });
-  const [clickedOption, setClickedOption] = useState(null);
+  const [disabled, setDisabled] = useState(false);
   
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -101,9 +101,9 @@ function GamePage({ student, token, onLogout }) {
   }, [selectedSubject]);
   
   const handleAnswer = async (answer, optionIndex) => {
-    if (!currentQuestion) return;
+    if (!currentQuestion || disabled) return;
     
-    setClickedOption(optionIndex);
+    setDisabled(true);
     
     let isCorrect = false;
     if (currentQuestion.correctAnswer) {
@@ -116,30 +116,25 @@ function GamePage({ student, token, onLogout }) {
     const correctAnswerText = currentQuestion.correctAnswer || currentQuestion.options[currentQuestion.correct];
     const explanation = currentQuestion.explanation || (isCorrect ? 'Great job!' : `The correct answer is: ${correctAnswerText}`);
     
-    // Show feedback with explanation
     if (isCorrect) {
       setAnswerFeedback({ 
         show: true, 
         isCorrect: true, 
-        message: '✅ CORRECT! +10 points, +5 Kwacha', 
-        explanation: explanation 
+        message: '+10 points! +5 Kwacha', 
+        explanation: '' 
       });
       playSound('correct');
     } else {
       setAnswerFeedback({ 
         show: true, 
         isCorrect: false, 
-        message: `❌ WRONG!`, 
+        message: 'Wrong answer', 
         explanation: explanation 
       });
       playSound('wrong');
     }
     
-    // Hide feedback after 3 seconds
-    setTimeout(() => {
-      setAnswerFeedback({ show: false, isCorrect: false, message: '', explanation: '' });
-      setClickedOption(null);
-    }, 3000);
+    setTimeout(() => setAnswerFeedback({ show: false, isCorrect: false, message: '', explanation: '' }), 2500);
     
     try {
       const response = await api.post('/progress', {
@@ -158,13 +153,17 @@ function GamePage({ student, token, onLogout }) {
       setKwachaBalance(response.data.stats.kwachaBalance);
       setLevel(response.data.stats.level);
       
-      const subjectQuestions = questions.filter(q => q.subject === selectedSubject);
-      if (subjectQuestions.length > 0) {
-        const randomIndex = Math.floor(Math.random() * subjectQuestions.length);
-        setCurrentQuestion(subjectQuestions[randomIndex]);
-      }
+      setTimeout(async () => {
+        const subjectQuestions = questions.filter(q => q.subject === selectedSubject);
+        if (subjectQuestions.length > 0) {
+          const randomIndex = Math.floor(Math.random() * subjectQuestions.length);
+          setCurrentQuestion(subjectQuestions[randomIndex]);
+        }
+        setDisabled(false);
+      }, 1000);
     } catch (error) {
       console.error('Error saving progress:', error);
+      setDisabled(false);
     }
   };
   
@@ -172,129 +171,117 @@ function GamePage({ student, token, onLogout }) {
     return (
       <div style={styles.loading}>
         <div style={styles.spinner}></div>
-        <p>Loading your adventure...</p>
+        <p>Loading...</p>
       </div>
     );
   }
   
   return (
     <div style={styles.container}>
-      <div style={styles.musicPlayer}>
-        <button onClick={toggleMusic} style={styles.musicButton}>
-          {isMusicPlaying ? '🔊 Music On' : '🔇 Music Off'}
-        </button>
-      </div>
+      {/* Music Button */}
+      <button onClick={toggleMusic} style={styles.musicButton}>
+        {isMusicPlaying ? '🔊' : '🔇'}
+      </button>
       
+      {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>🎓 Welcome, {student.name}!</h1>
-          <p style={styles.grade}>Grade {student.grade || 7} Student</p>
+          <h1 style={styles.title}>Welcome, {student.name}</h1>
+          <p style={styles.grade}>Grade {student.grade || 7}</p>
         </div>
-        <button onClick={onLogout} style={styles.logoutButton}>🚪 Logout</button>
+        <button onClick={onLogout} style={styles.logoutButton}>Logout</button>
       </div>
       
-      {/* Stats Cards - Better layout for mobile */}
-      <div style={styles.statsRow}>
-        <div style={styles.statCard}>
-          <div style={styles.statLabel}>⭐ Score</div>
+      {/* Stats Row */}
+      <div style={styles.statsGrid}>
+        <div style={styles.statBox}>
           <div style={styles.statValue}>{score}</div>
+          <div style={styles.statLabel}>Points</div>
         </div>
-        <div style={styles.statCard}>
-          <div style={styles.statLabel}>💰 Kwacha</div>
-          <div style={styles.statValue}>K {kwachaBalance}</div>
+        <div style={styles.statBox}>
+          <div style={styles.statValue}>K{kwachaBalance}</div>
+          <div style={styles.statLabel}>Kwacha</div>
         </div>
-        <div style={styles.statCard}>
-          <div style={styles.statLabel}>🎯 Level</div>
+        <div style={styles.statBox}>
           <div style={styles.statValue}>{level}</div>
+          <div style={styles.statLabel}>Level</div>
         </div>
       </div>
       
-      {/* Level Progress Bar */}
+      {/* Progress Bar */}
       <div style={styles.progressContainer}>
-        <div style={styles.progressLabel}>Progress to Grandmaster</div>
-        <div style={styles.progressBarBg}>
-          <div style={{...styles.progressBarFill, width: `${Math.min((score / 1000) * 100, 100)}%`}}></div>
+        <div style={styles.progressBar}>
+          <div style={{...styles.progressFill, width: `${(score / 1000) * 100}%`}}></div>
         </div>
-        <div style={styles.progressText}>{score}/1000 points</div>
+        <div style={styles.progressText}>{score}/1000 XP</div>
       </div>
       
-      {/* Feedback Message with Explanation */}
+      {/* Feedback Toast */}
       {answerFeedback.show && (
         <div style={{
-          ...styles.feedback,
-          backgroundColor: answerFeedback.isCorrect ? '#4CAF50' : '#f44336'
+          ...styles.toast,
+          backgroundColor: answerFeedback.isCorrect ? '#10b981' : '#ef4444'
         }}>
-          <div style={styles.feedbackMessage}>{answerFeedback.message}</div>
-          <div style={styles.feedbackExplanation}>{answerFeedback.explanation}</div>
+          <div style={styles.toastMessage}>{answerFeedback.message}</div>
+          {answerFeedback.explanation && (
+            <div style={styles.toastExplanation}>{answerFeedback.explanation}</div>
+          )}
         </div>
       )}
       
       {/* Subject Selector */}
-      <div style={styles.subjectContainer}>
-        <div style={styles.subjectTitle}>📚 Choose Subject</div>
-        <div style={styles.subjectButtons}>
-          {['Mathematics', 'English', 'Science'].map(subj => (
-            <button 
-              key={subj} 
-              onClick={() => setSelectedSubject(subj)} 
-              style={{
-                ...styles.subjectButton, 
-                background: selectedSubject === subj ? '#764ba2' : 'white',
-                color: selectedSubject === subj ? 'white' : '#764ba2',
-                border: selectedSubject === subj ? 'none' : '2px solid #764ba2'
-              }}
+      <div style={styles.subjectsContainer}>
+        {['Mathematics', 'English', 'Science'].map(subj => (
+          <button
+            key={subj}
+            onClick={() => setSelectedSubject(subj)}
+            style={{
+              ...styles.subjectButton,
+              backgroundColor: selectedSubject === subj ? '#6366f1' : '#f3f4f6',
+              color: selectedSubject === subj ? 'white' : '#4b5563'
+            }}
+          >
+            {subj === 'Mathematics' && '📐'} {subj === 'English' && '📖'} {subj === 'Science' && '🔬'}
+            <span style={{marginLeft: '8px'}}>{subj}</span>
+          </button>
+        ))}
+      </div>
+      
+      {/* Question Card */}
+      <div style={styles.questionCard}>
+        <div style={styles.questionMeta}>
+          <span style={styles.subjectTag}>{currentQuestion?.subject}</span>
+          <span style={styles.difficultyTag}>{currentQuestion?.difficulty || 'Medium'}</span>
+        </div>
+        <h2 style={styles.questionText}>{currentQuestion?.question}</h2>
+        <div style={styles.optionsGrid}>
+          {currentQuestion?.options.map((option, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleAnswer(option, idx)}
+              disabled={disabled}
+              style={styles.optionButton}
             >
-              {subj === 'Mathematics' && '🔢 '}{subj === 'English' && '📖 '}{subj === 'Science' && '🔬 '}{subj}
+              {option}
             </button>
           ))}
         </div>
       </div>
       
-      {/* Question Card */}
-      <div style={styles.questionCard}>
-        {currentQuestion && (
-          <>
-            <div style={styles.questionHeader}>
-              <span style={styles.subjectBadge}>{currentQuestion.subject}</span>
-              <span style={styles.difficultyBadge}>{currentQuestion.difficulty || 'Medium'}</span>
-            </div>
-            <h2 style={styles.questionText}>{currentQuestion.question}</h2>
-            <div style={styles.optionsGrid}>
-              {currentQuestion.options.map((option, idx) => (
-                <button 
-                  key={idx} 
-                  onClick={() => handleAnswer(option, idx)} 
-                  style={{
-                    ...styles.optionButton,
-                    backgroundColor: clickedOption === idx ? (answerFeedback.isCorrect ? '#4CAF50' : '#f44336') : '#f0f0f0',
-                    color: clickedOption === idx ? 'white' : '#333',
-                    transform: clickedOption === idx ? 'scale(0.98)' : 'scale(1)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (clickedOption !== idx) e.target.style.backgroundColor = '#764ba2';
-                    if (clickedOption !== idx) e.target.style.color = 'white';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (clickedOption !== idx) e.target.style.backgroundColor = '#f0f0f0';
-                    if (clickedOption !== idx) e.target.style.color = '#333';
-                  }}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-      
       {/* Progress Stats */}
       {stats && (
-        <div style={styles.statsCard}>
-          <h3 style={styles.statsTitle}>📊 Your Progress</h3>
-          <div style={styles.statsGrid}>
-            <div>Questions Answered:</div><strong>{stats.questionsAnswered}</strong>
-            <div>Correct Answers:</div><strong>{stats.correctAnswers}</strong>
-            <div>Accuracy:</div><strong>{stats.questionsAnswered > 0 ? Math.round((stats.correctAnswers / stats.questionsAnswered) * 100) : 0}%</strong>
+        <div style={styles.progressStats}>
+          <div style={styles.progressStatItem}>
+            <span>Questions</span>
+            <strong>{stats.questionsAnswered}</strong>
+          </div>
+          <div style={styles.progressStatItem}>
+            <span>Correct</span>
+            <strong>{stats.correctAnswers}</strong>
+          </div>
+          <div style={styles.progressStatItem}>
+            <span>Accuracy</span>
+            <strong>{stats.questionsAnswered > 0 ? Math.round((stats.correctAnswers / stats.questionsAnswered) * 100) : 0}%</strong>
           </div>
         </div>
       )}
@@ -303,250 +290,233 @@ function GamePage({ student, token, onLogout }) {
 }
 
 const styles = {
-  container: { 
-    minHeight: '100vh', 
-    background: 'linear-gradient(135deg, #f5f0ff 0%, #ffe6f0 100%)', 
-    padding: '20px' 
+  container: {
+    minHeight: '100vh',
+    background: '#f9fafb',
+    padding: '20px',
+    paddingBottom: '40px'
   },
-  musicPlayer: { 
-    position: 'fixed', 
-    bottom: '20px', 
-    right: '20px', 
-    zIndex: 1000 
+  musicButton: {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    width: '48px',
+    height: '48px',
+    borderRadius: '24px',
+    background: 'white',
+    border: '1px solid #e5e7eb',
+    fontSize: '20px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    zIndex: 100
   },
-  musicButton: { 
-    background: 'white', 
-    border: 'none', 
-    padding: '12px 20px', 
-    borderRadius: '25px', 
-    boxShadow: '0 2px 10px rgba(0,0,0,0.2)', 
-    cursor: 'pointer', 
-    fontWeight: 'bold', 
-    color: '#764ba2' 
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px'
   },
-  header: { 
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: '20px', 
-    padding: '15px 20px', 
-    background: 'white', 
-    borderRadius: '15px', 
-    flexWrap: 'wrap', 
-    gap: '10px' 
+  title: {
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#1f2937',
+    margin: 0
   },
-  title: { 
-    color: '#764ba2', 
-    margin: 0, 
-    fontSize: '20px' 
+  grade: {
+    fontSize: '14px',
+    color: '#6b7280',
+    margin: '4px 0 0'
   },
-  grade: { 
-    color: '#666', 
-    margin: '5px 0 0', 
-    fontSize: '14px' 
+  logoutButton: {
+    background: 'white',
+    border: '1px solid #e5e7eb',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontSize: '14px',
+    cursor: 'pointer',
+    color: '#6b7280'
   },
-  logoutButton: { 
-    background: '#ff6b6b', 
-    color: 'white', 
-    border: 'none', 
-    padding: '8px 16px', 
-    borderRadius: '10px', 
-    cursor: 'pointer', 
-    fontWeight: 'bold' 
-  },
-  statsRow: {
+  statsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '15px',
+    gap: '12px',
     marginBottom: '20px'
   },
-  statCard: {
+  statBox: {
     background: 'white',
-    borderRadius: '15px',
-    padding: '15px',
+    borderRadius: '16px',
+    padding: '16px',
     textAlign: 'center',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-  },
-  statLabel: {
-    fontSize: '14px',
-    color: '#666',
-    marginBottom: '5px'
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   },
   statValue: {
     fontSize: '28px',
-    fontWeight: 'bold',
-    color: '#764ba2'
+    fontWeight: '700',
+    color: '#6366f1'
+  },
+  statLabel: {
+    fontSize: '12px',
+    color: '#6b7280',
+    marginTop: '4px'
   },
   progressContainer: {
     background: 'white',
-    borderRadius: '15px',
-    padding: '15px',
-    marginBottom: '20px'
+    borderRadius: '12px',
+    padding: '12px',
+    marginBottom: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
   },
-  progressLabel: {
-    fontSize: '14px',
-    color: '#666',
-    marginBottom: '8px'
-  },
-  progressBarBg: {
-    background: '#e0e0e0',
-    height: '10px',
-    borderRadius: '5px',
+  progressBar: {
+    background: '#e5e7eb',
+    height: '8px',
+    borderRadius: '4px',
     overflow: 'hidden'
   },
-  progressBarFill: {
-    background: '#764ba2',
+  progressFill: {
+    background: '#6366f1',
     height: '100%',
+    borderRadius: '4px',
     transition: 'width 0.3s'
   },
   progressText: {
     fontSize: '12px',
-    color: '#666',
+    color: '#6b7280',
     marginTop: '8px',
     textAlign: 'right'
   },
-  feedback: {
+  toast: {
+    position: 'fixed',
+    top: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    padding: '12px 20px',
+    borderRadius: '12px',
     color: 'white',
-    padding: '15px',
-    borderRadius: '10px',
-    marginBottom: '20px',
-    textAlign: 'center'
+    zIndex: 200,
+    textAlign: 'center',
+    maxWidth: '90%',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
   },
-  feedbackMessage: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    marginBottom: '8px'
-  },
-  feedbackExplanation: {
+  toastMessage: {
     fontSize: '14px',
-    opacity: 0.95
+    fontWeight: '500'
   },
-  subjectContainer: {
-    background: 'white',
-    borderRadius: '15px',
-    padding: '15px',
-    marginBottom: '20px'
+  toastExplanation: {
+    fontSize: '12px',
+    marginTop: '4px',
+    opacity: 0.9
   },
-  subjectTitle: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-    color: '#764ba2',
-    marginBottom: '12px'
-  },
-  subjectButtons: {
+  subjectsContainer: {
     display: 'flex',
     gap: '10px',
-    flexWrap: 'wrap'
+    marginBottom: '20px'
   },
   subjectButton: {
     flex: 1,
-    padding: '10px',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '12px',
+    borderRadius: '12px',
+    border: 'none',
     fontSize: '14px',
-    minWidth: '100px',
-    transition: 'all 0.3s'
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
   },
   questionCard: {
     background: 'white',
-    borderRadius: '15px',
-    padding: '20px',
-    marginBottom: '20px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+    borderRadius: '20px',
+    padding: '24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    marginBottom: '20px'
   },
-  questionHeader: {
+  questionMeta: {
     display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '15px',
-    flexWrap: 'wrap',
-    gap: '10px'
+    gap: '8px',
+    marginBottom: '16px'
   },
-  subjectBadge: {
-    background: '#764ba2',
-    color: 'white',
-    padding: '5px 12px',
+  subjectTag: {
+    background: '#e0e7ff',
+    color: '#6366f1',
+    padding: '4px 12px',
     borderRadius: '20px',
-    fontSize: '12px'
+    fontSize: '12px',
+    fontWeight: '500'
   },
-  difficultyBadge: {
-    background: '#4CAF50',
-    color: 'white',
-    padding: '5px 12px',
+  difficultyTag: {
+    background: '#f3f4f6',
+    color: '#6b7280',
+    padding: '4px 12px',
     borderRadius: '20px',
-    fontSize: '12px'
+    fontSize: '12px',
+    fontWeight: '500'
   },
   questionText: {
-    fontSize: '20px',
-    marginBottom: '20px',
-    color: '#333',
+    fontSize: '18px',
+    fontWeight: '500',
+    color: '#1f2937',
+    margin: '0 0 20px',
     lineHeight: 1.4
   },
   optionsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px'
-  },
-  optionButton: {
-    padding: '14px',
-    border: 'none',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.3s',
-    fontWeight: '500'
-  },
-  statsCard: {
-    background: 'white',
-    borderRadius: '15px',
-    padding: '20px',
-    marginTop: '10px'
-  },
-  statsTitle: {
-    color: '#764ba2',
-    marginTop: 0,
-    marginBottom: '15px',
-    fontSize: '16px'
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    display: 'flex',
+    flexDirection: 'column',
     gap: '10px'
   },
-  loading: { 
-    display: 'flex', 
-    flexDirection: 'column', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    minHeight: '100vh', 
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-    color: 'white' 
+  optionButton: {
+    width: '100%',
+    padding: '14px',
+    background: '#f3f4f6',
+    border: '1px solid #e5e7eb',
+    borderRadius: '12px',
+    fontSize: '14px',
+    textAlign: 'left',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    color: '#1f2937'
   },
-  spinner: { 
-    width: '50px', 
-    height: '50px', 
-    border: '5px solid rgba(255,255,255,0.3)', 
-    borderTop: '5px solid white', 
-    borderRadius: '50%', 
-    animation: 'spin 1s linear infinite' 
+  progressStats: {
+    background: 'white',
+    borderRadius: '16px',
+    padding: '16px',
+    display: 'flex',
+    justifyContent: 'space-around',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+  },
+  progressStatItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px'
+  },
+  loading: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    background: '#f9fafb'
+  },
+  spinner: {
+    width: '40px',
+    height: '40px',
+    border: '3px solid #e5e7eb',
+    borderTop: '3px solid #6366f1',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite'
   }
 };
 
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-@media (max-width: 768px) {
-  div[style*="grid-template-columns: 1fr 1fr"] { 
-    grid-template-columns: 1fr !important; 
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
-  button[style*="padding: 14px"] { 
-    padding: 12px !important; 
-    font-size: 13px !important; 
+  button:hover {
+    transform: scale(1.01);
   }
-  h2[style*="font-size: 20px"] { 
-    font-size: 18px !important; 
-  }
-}
 `;
 document.head.appendChild(styleSheet);
 
