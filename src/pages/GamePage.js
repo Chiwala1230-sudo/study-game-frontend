@@ -15,7 +15,7 @@ function GamePage({ student, token, onLogout }) {
   const [selectedOption, setSelectedOption] = useState(null);
   const [disabled, setDisabled] = useState(false);
   
-  const [isMusicPlaying, setIsMusicPlaying] = useState(true); // CHANGED: starts as true
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
   const audioRef = useRef(null);
   
   const playSound = (type) => {
@@ -30,17 +30,13 @@ function GamePage({ student, token, onLogout }) {
   
   const toggleMusic = () => {
     if (audioRef.current) {
-      if (isMusicPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play().catch(e => console.log('Music error:', e));
-      }
+      if (isMusicPlaying) audioRef.current.pause();
+      else audioRef.current.play().catch(e => console.log('Music error:', e));
       setIsMusicPlaying(!isMusicPlaying);
     }
   };
   
   useEffect(() => {
-    // Music starts automatically
     audioRef.current = new Audio('/sounds/background-music.mp3');
     audioRef.current.loop = true;
     audioRef.current.volume = 0.3;
@@ -187,7 +183,10 @@ function GamePage({ student, token, onLogout }) {
     return '💖';
   };
   
-  // NEW: All 5 subjects with emojis
+  const getQuestionText = (q) => {
+    return q.question || q.text || 'Question text not available';
+  };
+  
   const allSubjects = [
     { name: 'Mathematics', emoji: '🔢', icon: '➕' },
     { name: 'English', emoji: '📚', icon: '✨' },
@@ -207,12 +206,10 @@ function GamePage({ student, token, onLogout }) {
   
   return (
     <div style={styles.container}>
-      {/* Music Button - shows mute/unmute */}
       <button onClick={toggleMusic} style={styles.musicButton}>
         {isMusicPlaying ? '🎵' : '🎵🔇'}
       </button>
       
-      {/* Header */}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>🌸 Welcome, {student.name}! 🌸</h1>
@@ -221,7 +218,6 @@ function GamePage({ student, token, onLogout }) {
         <button onClick={onLogout} style={styles.logoutButton}>🚪 Goodbye</button>
       </div>
       
-      {/* Stats Row */}
       <div style={styles.statsGrid}>
         <div style={styles.statBox}>
           <div style={styles.statEmoji}>⭐</div>
@@ -240,7 +236,6 @@ function GamePage({ student, token, onLogout }) {
         </div>
       </div>
       
-      {/* Progress Bar */}
       <div style={styles.progressContainer}>
         <div style={styles.progressLabel}>💖 Journey to Grandmaster 💖</div>
         <div style={styles.progressBar}>
@@ -249,7 +244,6 @@ function GamePage({ student, token, onLogout }) {
         <div style={styles.progressText}>{score}/1000 Sparkle Points ✨</div>
       </div>
       
-      {/* Feedback Toast */}
       {answerFeedback.show && (
         <div style={{
           ...styles.toast,
@@ -264,7 +258,6 @@ function GamePage({ student, token, onLogout }) {
         </div>
       )}
       
-      {/* Subject Selector - NOW WITH 5 SUBJECTS */}
       <div style={styles.subjectsContainer}>
         {allSubjects.map(subj => (
           <button
@@ -284,7 +277,6 @@ function GamePage({ student, token, onLogout }) {
         ))}
       </div>
       
-      {/* Question Card */}
       <div style={styles.questionCard}>
         <div style={styles.questionMeta}>
           <span style={styles.subjectTag}>💜 {currentQuestion?.subject} 💜</span>
@@ -294,7 +286,7 @@ function GamePage({ student, token, onLogout }) {
             {currentQuestion?.difficulty === 'hard' && '💪 Challenge Mode 💪'}
           </span>
         </div>
-        <h2 style={styles.questionText}>{currentQuestion?.question}</h2>
+        <h2 style={styles.questionText}>{getQuestionText(currentQuestion)}</h2>
         <div style={styles.optionsGrid}>
           {currentQuestion?.options.map((option, idx) => (
             <button
@@ -322,7 +314,6 @@ function GamePage({ student, token, onLogout }) {
         </div>
       </div>
       
-      {/* Progress Stats */}
       {stats && (
         <div style={styles.progressStats}>
           <div style={styles.progressStatItem}>
@@ -344,257 +335,257 @@ function GamePage({ student, token, onLogout }) {
 }
 
 const styles = {
-  container: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #ffe9f4 0%, #ffe0f0 50%, #ffd6ea 100%)',
-    padding: '20px',
-    paddingBottom: '40px'
+  container: { 
+    minHeight: '100vh', 
+    background: 'linear-gradient(135deg, #ffe9f4 0%, #ffe0f0 50%, #ffd6ea 100%)', 
+    padding: '20px', 
+    paddingBottom: '40px' 
   },
-  musicButton: {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    width: '50px',
-    height: '50px',
-    borderRadius: '25px',
-    background: 'white',
-    border: '2px solid #f0a6ca',
-    fontSize: '20px',
-    cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.3)',
-    zIndex: 100,
-    color: '#d63384'
+  musicButton: { 
+    position: 'fixed', 
+    bottom: '20px', 
+    right: '20px', 
+    width: '50px', 
+    height: '50px', 
+    borderRadius: '25px', 
+    background: 'white', 
+    border: '2px solid #f0a6ca', 
+    fontSize: '20px', 
+    cursor: 'pointer', 
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.3)', 
+    zIndex: 100, 
+    color: '#d63384' 
   },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '24px',
-    flexWrap: 'wrap',
-    gap: '10px'
+  header: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: '24px', 
+    flexWrap: 'wrap', 
+    gap: '10px' 
   },
-  title: {
-    fontSize: '20px',
-    fontWeight: '600',
-    color: '#d63384',
-    margin: 0
+  title: { 
+    fontSize: '20px', 
+    fontWeight: '600', 
+    color: '#d63384', 
+    margin: 0 
   },
-  grade: {
-    fontSize: '14px',
-    color: '#e86f9c',
-    margin: '4px 0 0'
+  grade: { 
+    fontSize: '14px', 
+    color: '#e86f9c', 
+    margin: '4px 0 0' 
   },
-  logoutButton: {
-    background: 'white',
-    border: '2px solid #f0a6ca',
-    padding: '8px 16px',
-    borderRadius: '25px',
-    fontSize: '14px',
-    cursor: 'pointer',
-    color: '#d63384',
-    fontWeight: '500'
+  logoutButton: { 
+    background: 'white', 
+    border: '2px solid #f0a6ca', 
+    padding: '8px 16px', 
+    borderRadius: '25px', 
+    fontSize: '14px', 
+    cursor: 'pointer', 
+    color: '#d63384', 
+    fontWeight: '500' 
   },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
-    marginBottom: '20px'
+  statsGrid: { 
+    display: 'grid', 
+    gridTemplateColumns: 'repeat(3, 1fr)', 
+    gap: '12px', 
+    marginBottom: '20px' 
   },
-  statBox: {
-    background: 'white',
-    borderRadius: '20px',
-    padding: '16px',
-    textAlign: 'center',
-    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)',
-    border: '1px solid #f0a6ca'
+  statBox: { 
+    background: 'white', 
+    borderRadius: '20px', 
+    padding: '16px', 
+    textAlign: 'center', 
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)', 
+    border: '1px solid #f0a6ca' 
   },
-  statEmoji: {
-    fontSize: '28px',
-    marginBottom: '5px'
+  statEmoji: { 
+    fontSize: '28px', 
+    marginBottom: '5px' 
   },
-  statValue: {
-    fontSize: '28px',
-    fontWeight: '700',
-    color: '#d63384'
+  statValue: { 
+    fontSize: '28px', 
+    fontWeight: '700', 
+    color: '#d63384' 
   },
-  statLabel: {
-    fontSize: '12px',
-    color: '#e86f9c',
-    marginTop: '4px'
+  statLabel: { 
+    fontSize: '12px', 
+    color: '#e86f9c', 
+    marginTop: '4px' 
   },
-  progressContainer: {
-    background: 'white',
-    borderRadius: '20px',
-    padding: '15px',
-    marginBottom: '24px',
-    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)',
-    border: '1px solid #f0a6ca'
+  progressContainer: { 
+    background: 'white', 
+    borderRadius: '20px', 
+    padding: '15px', 
+    marginBottom: '24px', 
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)', 
+    border: '1px solid #f0a6ca' 
   },
-  progressLabel: {
-    fontSize: '12px',
-    color: '#d63384',
-    marginBottom: '8px',
-    textAlign: 'center',
-    fontWeight: '500'
+  progressLabel: { 
+    fontSize: '12px', 
+    color: '#d63384', 
+    marginBottom: '8px', 
+    textAlign: 'center', 
+    fontWeight: '500' 
   },
-  progressBar: {
-    background: '#ffe0f0',
-    height: '10px',
-    borderRadius: '5px',
-    overflow: 'hidden'
+  progressBar: { 
+    background: '#ffe0f0', 
+    height: '10px', 
+    borderRadius: '5px', 
+    overflow: 'hidden' 
   },
-  progressFill: {
-    background: 'linear-gradient(90deg, #f093fb 0%, #f5576c 100%)',
-    height: '100%',
-    borderRadius: '5px',
-    transition: 'width 0.3s'
+  progressFill: { 
+    background: 'linear-gradient(90deg, #f093fb 0%, #f5576c 100%)', 
+    height: '100%', 
+    borderRadius: '5px', 
+    transition: 'width 0.3s' 
   },
-  progressText: {
-    fontSize: '11px',
-    color: '#e86f9c',
-    marginTop: '8px',
-    textAlign: 'right'
+  progressText: { 
+    fontSize: '11px', 
+    color: '#e86f9c', 
+    marginTop: '8px', 
+    textAlign: 'right' 
   },
-  toast: {
-    position: 'fixed',
-    top: '80px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    padding: '15px 25px',
-    borderRadius: '50px',
-    color: 'white',
-    zIndex: 200,
-    textAlign: 'center',
-    maxWidth: '90%',
-    boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-    fontWeight: '500'
+  toast: { 
+    position: 'fixed', 
+    top: '80px', 
+    left: '50%', 
+    transform: 'translateX(-50%)', 
+    padding: '15px 25px', 
+    borderRadius: '50px', 
+    color: 'white', 
+    zIndex: 200, 
+    textAlign: 'center', 
+    maxWidth: '90%', 
+    boxShadow: '0 8px 25px rgba(0,0,0,0.15)', 
+    fontWeight: '500' 
   },
-  toastMessage: {
-    fontSize: '15px',
-    fontWeight: '600'
+  toastMessage: { 
+    fontSize: '15px', 
+    fontWeight: '600' 
   },
-  toastExplanation: {
-    fontSize: '12px',
-    marginTop: '5px',
-    opacity: 0.95
+  toastExplanation: { 
+    fontSize: '12px', 
+    marginTop: '5px', 
+    opacity: 0.95 
   },
-  subjectsContainer: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-    gap: '10px',
-    marginBottom: '20px'
+  subjectsContainer: { 
+    display: 'grid', 
+    gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', 
+    gap: '10px', 
+    marginBottom: '20px' 
   },
-  subjectButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '10px',
-    borderRadius: '30px',
-    fontSize: '13px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    boxShadow: '0 2px 8px rgba(240, 166, 202, 0.2)',
-    gap: '5px',
-    whiteSpace: 'nowrap'
+  subjectButton: { 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    padding: '10px', 
+    borderRadius: '30px', 
+    fontSize: '13px', 
+    fontWeight: '500', 
+    cursor: 'pointer', 
+    transition: 'all 0.2s', 
+    boxShadow: '0 2px 8px rgba(240, 166, 202, 0.2)', 
+    gap: '5px', 
+    whiteSpace: 'nowrap' 
   },
-  questionCard: {
-    background: 'white',
-    borderRadius: '30px',
-    padding: '25px',
-    boxShadow: '0 8px 25px rgba(240, 166, 202, 0.2)',
-    marginBottom: '20px',
-    border: '1px solid #f0a6ca'
+  questionCard: { 
+    background: 'white', 
+    borderRadius: '30px', 
+    padding: '25px', 
+    boxShadow: '0 8px 25px rgba(240, 166, 202, 0.2)', 
+    marginBottom: '20px', 
+    border: '1px solid #f0a6ca' 
   },
-  questionMeta: {
-    display: 'flex',
-    gap: '10px',
-    marginBottom: '16px',
-    flexWrap: 'wrap'
+  questionMeta: { 
+    display: 'flex', 
+    gap: '10px', 
+    marginBottom: '16px', 
+    flexWrap: 'wrap' 
   },
-  subjectTag: {
-    background: '#ffe0f0',
-    color: '#d63384',
-    padding: '5px 15px',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: '500'
+  subjectTag: { 
+    background: '#ffe0f0', 
+    color: '#d63384', 
+    padding: '5px 15px', 
+    borderRadius: '20px', 
+    fontSize: '12px', 
+    fontWeight: '500' 
   },
-  difficultyTag: {
-    background: '#f0a6ca20',
-    color: '#e86f9c',
-    padding: '5px 15px',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: '500'
+  difficultyTag: { 
+    background: '#f0a6ca20', 
+    color: '#e86f9c', 
+    padding: '5px 15px', 
+    borderRadius: '20px', 
+    fontSize: '12px', 
+    fontWeight: '500' 
   },
-  questionText: {
-    fontSize: '18px',
-    fontWeight: '500',
-    color: '#4a4a4a',
-    margin: '0 0 20px',
-    lineHeight: 1.4
+  questionText: { 
+    fontSize: '18px', 
+    fontWeight: '500', 
+    color: '#4a4a4a', 
+    margin: '0 0 20px', 
+    lineHeight: 1.4 
   },
-  optionsGrid: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px'
+  optionsGrid: { 
+    display: 'flex', 
+    flexDirection: 'column', 
+    gap: '12px' 
   },
-  optionButton: {
-    width: '100%',
-    padding: '14px',
-    borderRadius: '50px',
-    fontSize: '14px',
-    textAlign: 'left',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    color: '#4a4a4a',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    fontWeight: '500'
+  optionButton: { 
+    width: '100%', 
+    padding: '14px', 
+    borderRadius: '50px', 
+    fontSize: '14px', 
+    textAlign: 'left', 
+    cursor: 'pointer', 
+    transition: 'all 0.2s', 
+    color: '#4a4a4a', 
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: '10px', 
+    fontWeight: '500' 
   },
-  optionLetter: {
-    fontSize: '16px',
-    width: '30px'
+  optionLetter: { 
+    fontSize: '16px', 
+    width: '30px' 
   },
-  progressStats: {
-    background: 'white',
-    borderRadius: '25px',
-    padding: '16px',
-    display: 'flex',
-    justifyContent: 'space-around',
-    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)',
-    border: '1px solid #f0a6ca'
+  progressStats: { 
+    background: 'white', 
+    borderRadius: '25px', 
+    padding: '16px', 
+    display: 'flex', 
+    justifyContent: 'space-around', 
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)', 
+    border: '1px solid #f0a6ca' 
   },
-  progressStatItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '5px',
-    color: '#d63384',
-    fontSize: '12px'
+  progressStatItem: { 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    gap: '5px', 
+    color: '#d63384', 
+    fontSize: '12px' 
   },
-  loading: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #ffe9f4 0%, #ffe0f0 100%)'
+  loading: { 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minHeight: '100vh', 
+    background: 'linear-gradient(135deg, #ffe9f4 0%, #ffe0f0 100%)' 
   },
-  spinner: {
-    width: '50px',
-    height: '50px',
-    border: '3px solid #f0a6ca',
-    borderTop: '3px solid #d63384',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite'
+  spinner: { 
+    width: '50px', 
+    height: '50px', 
+    border: '3px solid #f0a6ca', 
+    borderTop: '3px solid #d63384', 
+    borderRadius: '50%', 
+    animation: 'spin 1s linear infinite' 
   },
-  loadingText: {
-    marginTop: '15px',
-    color: '#d63384',
-    fontSize: '16px'
+  loadingText: { 
+    marginTop: '15px', 
+    color: '#d63384', 
+    fontSize: '16px' 
   }
 };
 
