@@ -15,7 +15,7 @@ function GamePage({ student, token, onLogout }) {
   const [selectedOption, setSelectedOption] = useState(null);
   const [disabled, setDisabled] = useState(false);
   
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
   const audioRef = useRef(null);
   
   const playSound = (type) => {
@@ -43,7 +43,7 @@ function GamePage({ student, token, onLogout }) {
     audioRef.current = new Audio('/sounds/background-music.mp3');
     audioRef.current.loop = true;
     audioRef.current.volume = 0.3;
-    // Don't autoplay - user must click music button first
+    audioRef.current.play().catch(e => console.log('Music autoplay error:', e));
     return () => { if (audioRef.current) audioRef.current.pause(); };
   }, []);
   
@@ -96,9 +96,12 @@ function GamePage({ student, token, onLogout }) {
         if (subjectQuestions.length > 0) {
           const randomIndex = Math.floor(Math.random() * subjectQuestions.length);
           setCurrentQuestion(subjectQuestions[randomIndex]);
+        } else {
+          setCurrentQuestion(null);
         }
       } catch (error) {
         console.error('Error loading questions:', error);
+        setCurrentQuestion(null);
       }
       setLoading(false);
     };
@@ -161,6 +164,7 @@ function GamePage({ student, token, onLogout }) {
       setScore(response.data.stats.totalScore);
       setKwachaBalance(response.data.stats.kwachaBalance);
       setLevel(response.data.stats.level);
+      setStats(response.data.stats);
       
       setTimeout(async () => {
         const subjectQuestions = questions.filter(q => q.subject === selectedSubject);
@@ -187,7 +191,7 @@ function GamePage({ student, token, onLogout }) {
   };
   
   const getQuestionText = (q) => {
-    if (!q) return 'Loading question...';
+    if (!q) return '✨ Add questions in Admin Panel! ✨';
     return q.question || q.text || 'Question text not available';
   };
   
@@ -243,7 +247,7 @@ function GamePage({ student, token, onLogout }) {
       <div style={styles.progressContainer}>
         <div style={styles.progressLabel}>💖 Journey to Grandmaster 💖</div>
         <div style={styles.progressBar}>
-          <div style={{...styles.progressFill, width: `${(score / 1000) * 100}%`}}></div>
+          <div style={{...styles.progressFill, width: `${Math.min((score / 1000) * 100, 100)}%`}}></div>
         </div>
         <div style={styles.progressText}>{score}/1000 Sparkle Points ✨</div>
       </div>
@@ -322,8 +326,11 @@ function GamePage({ student, token, onLogout }) {
           </>
         ) : (
           <div style={styles.noQuestion}>
-            <p>🌸 No questions available for {selectedSubject} yet! 🌸</p>
-            <p>Ask your teacher to add some questions in the Admin Panel.</p>
+            <div style={styles.noQuestionEmoji}>📚✨</div>
+            <h3>No questions yet for {selectedSubject}!</h3>
+            <p>Go to <strong>Admin Panel → Questions</strong> to add questions.</p>
+            <p>Or use <strong>Bulk Import</strong> to add many questions at once!</p>
+            <button onClick={() => window.location.reload()} style={styles.reloadButton}>Refresh 🔄</button>
           </div>
         )}
       </div>
@@ -605,6 +612,20 @@ const styles = {
     textAlign: 'center',
     padding: '40px',
     color: '#d63384'
+  },
+  noQuestionEmoji: {
+    fontSize: '50px',
+    marginBottom: '15px'
+  },
+  reloadButton: {
+    marginTop: '20px',
+    padding: '10px 20px',
+    background: '#d63384',
+    color: 'white',
+    border: 'none',
+    borderRadius: '25px',
+    cursor: 'pointer',
+    fontSize: '14px'
   }
 };
 
