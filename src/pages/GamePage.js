@@ -11,6 +11,7 @@ function GamePage({ student, token, onLogout }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+  const [answerFeedback, setAnswerFeedback] = useState({ show: false, isCorrect: false, message: '' });
   
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -110,8 +111,18 @@ function GamePage({ student, token, onLogout }) {
     
     const deviceInfo = getDeviceInfo();
     
-    if (isCorrect) playSound('correct');
-    else playSound('wrong');
+    // Show feedback
+    if (isCorrect) {
+      setAnswerFeedback({ show: true, isCorrect: true, message: '✅ CORRECT! +10 points, +5 Kwacha' });
+      playSound('correct');
+    } else {
+      const correctText = currentQuestion.correctAnswer || currentQuestion.options[currentQuestion.correct];
+      setAnswerFeedback({ show: true, isCorrect: false, message: `❌ WRONG! Correct answer: ${correctText}` });
+      playSound('wrong');
+    }
+    
+    // Hide feedback after 2 seconds
+    setTimeout(() => setAnswerFeedback({ show: false, isCorrect: false, message: '' }), 2000);
     
     try {
       const response = await api.post('/progress', {
@@ -164,6 +175,16 @@ function GamePage({ student, token, onLogout }) {
         </div>
         <button onClick={onLogout} style={styles.logoutButton}>🚪 Logout</button>
       </div>
+      
+      {/* Feedback Message */}
+      {answerFeedback.show && (
+        <div style={{
+          ...styles.feedback,
+          backgroundColor: answerFeedback.isCorrect ? '#4CAF50' : '#f44336'
+        }}>
+          {answerFeedback.message}
+        </div>
+      )}
       
       <div style={styles.gameGrid}>
         <div style={styles.leftColumn}>
@@ -232,42 +253,227 @@ function GamePage({ student, token, onLogout }) {
 }
 
 const styles = {
-  container: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f0ff 0%, #ffe6f0 100%)', padding: '20px' },
-  musicPlayer: { position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000 },
-  musicButton: { background: 'white', border: 'none', padding: '12px 20px', borderRadius: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.2)', cursor: 'pointer', fontWeight: 'bold', color: '#764ba2' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', padding: '20px', background: 'white', borderRadius: '15px', flexWrap: 'wrap', gap: '10px' },
-  title: { color: '#764ba2', margin: 0, fontSize: '24px' },
-  grade: { color: '#666', margin: '5px 0 0' },
-  logoutButton: { background: '#ff6b6b', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' },
-  gameGrid: { display: 'grid', gridTemplateColumns: '1fr 350px', gap: '20px' },
-  leftColumn: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  rightColumn: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  card: { background: 'white', borderRadius: '15px', padding: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' },
-  cardTitle: { color: '#764ba2', marginTop: 0, marginBottom: '15px', fontSize: '18px' },
-  subjectButtons: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
-  subjectButton: { flex: 1, padding: '10px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', minWidth: '100px' },
-  questionHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' },
-  subjectBadge: { background: '#764ba2', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' },
-  difficultyBadge: { background: '#4CAF50', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' },
-  questionText: { fontSize: '22px', marginBottom: '25px', color: '#333', wordBreak: 'break-word' },
-  optionsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  optionButton: { padding: '15px', background: '#f0f0f0', border: '2px solid #e0e0e0', borderRadius: '10px', cursor: 'pointer', fontSize: '16px' },
-  scoreValue: { fontSize: '48px', fontWeight: 'bold', color: '#ffd700', textAlign: 'center' },
-  kwachaValue: { fontSize: '48px', fontWeight: 'bold', color: '#4CAF50', textAlign: 'center' },
-  levelValue: { fontSize: '32px', fontWeight: 'bold', color: '#764ba2', textAlign: 'center' },
-  levelProgress: { background: '#e0e0e0', height: '10px', borderRadius: '5px', marginTop: '10px', overflow: 'hidden' },
-  progressBar: { background: '#764ba2', height: '100%', transition: 'width 0.3s' },
-  statRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' },
-  loading: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' },
-  spinner: { width: '50px', height: '50px', border: '5px solid rgba(255,255,255,0.3)', borderTop: '5px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }
+  container: { 
+    minHeight: '100vh', 
+    background: 'linear-gradient(135deg, #f5f0ff 0%, #ffe6f0 100%)', 
+    padding: '20px' 
+  },
+  musicPlayer: { 
+    position: 'fixed', 
+    bottom: '20px', 
+    right: '20px', 
+    zIndex: 1000 
+  },
+  musicButton: { 
+    background: 'white', 
+    border: 'none', 
+    padding: '12px 20px', 
+    borderRadius: '25px', 
+    boxShadow: '0 2px 10px rgba(0,0,0,0.2)', 
+    cursor: 'pointer', 
+    fontWeight: 'bold', 
+    color: '#764ba2' 
+  },
+  header: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: '30px', 
+    padding: '20px', 
+    background: 'white', 
+    borderRadius: '15px', 
+    flexWrap: 'wrap', 
+    gap: '10px' 
+  },
+  title: { 
+    color: '#764ba2', 
+    margin: 0, 
+    fontSize: '24px' 
+  },
+  grade: { 
+    color: '#666', 
+    margin: '5px 0 0' 
+  },
+  logoutButton: { 
+    background: '#ff6b6b', 
+    color: 'white', 
+    border: 'none', 
+    padding: '10px 20px', 
+    borderRadius: '10px', 
+    cursor: 'pointer', 
+    fontWeight: 'bold' 
+  },
+  feedback: {
+    color: 'white',
+    padding: '15px',
+    borderRadius: '10px',
+    textAlign: 'center',
+    marginBottom: '20px',
+    fontSize: '16px',
+    fontWeight: 'bold'
+  },
+  gameGrid: { 
+    display: 'grid', 
+    gridTemplateColumns: '1fr 350px', 
+    gap: '20px' 
+  },
+  leftColumn: { 
+    display: 'flex', 
+    flexDirection: 'column', 
+    gap: '20px' 
+  },
+  rightColumn: { 
+    display: 'flex', 
+    flexDirection: 'column', 
+    gap: '20px' 
+  },
+  card: { 
+    background: 'white', 
+    borderRadius: '15px', 
+    padding: '25px', 
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)' 
+  },
+  cardTitle: { 
+    color: '#764ba2', 
+    marginTop: 0, 
+    marginBottom: '15px', 
+    fontSize: '18px' 
+  },
+  subjectButtons: { 
+    display: 'flex', 
+    gap: '10px', 
+    flexWrap: 'wrap' 
+  },
+  subjectButton: { 
+    flex: 1, 
+    padding: '10px', 
+    border: 'none', 
+    borderRadius: '8px', 
+    cursor: 'pointer', 
+    fontWeight: 'bold', 
+    minWidth: '100px' 
+  },
+  questionHeader: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    marginBottom: '20px', 
+    flexWrap: 'wrap', 
+    gap: '10px' 
+  },
+  subjectBadge: { 
+    background: '#764ba2', 
+    color: 'white', 
+    padding: '5px 10px', 
+    borderRadius: '5px', 
+    fontSize: '12px' 
+  },
+  difficultyBadge: { 
+    background: '#4CAF50', 
+    color: 'white', 
+    padding: '5px 10px', 
+    borderRadius: '5px', 
+    fontSize: '12px' 
+  },
+  questionText: { 
+    fontSize: '22px', 
+    marginBottom: '25px', 
+    color: '#333', 
+    wordBreak: 'break-word' 
+  },
+  optionsGrid: { 
+    display: 'grid', 
+    gridTemplateColumns: '1fr 1fr', 
+    gap: '15px' 
+  },
+  optionButton: { 
+    padding: '15px', 
+    background: '#f0f0f0', 
+    border: '2px solid #e0e0e0', 
+    borderRadius: '10px', 
+    cursor: 'pointer', 
+    fontSize: '16px', 
+    transition: 'all 0.3s' 
+  },
+  scoreValue: { 
+    fontSize: '48px', 
+    fontWeight: 'bold', 
+    color: '#ffd700', 
+    textAlign: 'center' 
+  },
+  kwachaValue: { 
+    fontSize: '48px', 
+    fontWeight: 'bold', 
+    color: '#4CAF50', 
+    textAlign: 'center' 
+  },
+  levelValue: { 
+    fontSize: '32px', 
+    fontWeight: 'bold', 
+    color: '#764ba2', 
+    textAlign: 'center' 
+  },
+  levelProgress: { 
+    background: '#e0e0e0', 
+    height: '10px', 
+    borderRadius: '5px', 
+    marginTop: '10px', 
+    overflow: 'hidden' 
+  },
+  progressBar: { 
+    background: '#764ba2', 
+    height: '100%', 
+    transition: 'width 0.3s' 
+  },
+  statRow: { 
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    padding: '8px 0', 
+    borderBottom: '1px solid #f0f0f0' 
+  },
+  loading: { 
+    display: 'flex', 
+    flexDirection: 'column', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    minHeight: '100vh', 
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+    color: 'white' 
+  },
+  spinner: { 
+    width: '50px', 
+    height: '50px', 
+    border: '5px solid rgba(255,255,255,0.3)', 
+    borderTop: '5px solid white', 
+    borderRadius: '50%', 
+    animation: 'spin 1s linear infinite' 
+  }
 };
 
 const styleSheet = document.createElement("style");
-styleSheet.textContent = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+styleSheet.textContent = `
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @media (max-width: 768px) {
-  div[style*="grid-template-columns: 1fr 350px"] { grid-template-columns: 1fr !important; }
-  div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-}`;
+  div[style*="grid-template-columns: 1fr 350px"] { 
+    grid-template-columns: 1fr !important; 
+  }
+  div[style*="grid-template-columns: 1fr 1fr"] { 
+    grid-template-columns: 1fr !important; 
+  }
+  button[style*="padding: 15px"] { 
+    padding: 12px !important; 
+    font-size: 14px !important; 
+  }
+  h2[style*="font-size: 22px"] { 
+    font-size: 18px !important; 
+  }
+  div[style*="padding: 25px"] { 
+    padding: 15px !important; 
+  }
+  div[style*="gap: 20px"] {
+    gap: 10px !important;
+  }
+}
+`;
 document.head.appendChild(styleSheet);
 
 export default GamePage;
