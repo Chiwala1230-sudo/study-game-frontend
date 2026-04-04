@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../services/api';
+import BulkImport from './BulkImport';
 
 function AdminPage({ onBack }) {
   const [password, setPassword] = useState('');
@@ -93,6 +94,7 @@ function AdminPage({ onBack }) {
         <button onClick={() => setActiveTab('students')} style={activeTab === 'students' ? styles.activeTab : styles.tab}>📚 Students</button>
         <button onClick={() => setActiveTab('progress')} style={activeTab === 'progress' ? styles.activeTab : styles.tab}>📊 Progress & Devices</button>
         <button onClick={() => setActiveTab('questions')} style={activeTab === 'questions' ? styles.activeTab : styles.tab}>📝 Questions</button>
+        <button onClick={() => setActiveTab('bulk')} style={activeTab === 'bulk' ? styles.activeTab : styles.tab}>📦 Bulk Import</button>
         <button onClick={() => setActiveTab('delete')} style={activeTab === 'delete' ? styles.activeTab : styles.tab}>🗑️ Delete Data</button>
       </div>
       
@@ -151,7 +153,11 @@ function AdminPage({ onBack }) {
           <div style={styles.addQuestion}>
             <h3>Add New Question</h3>
             <select value={newQuestion.subject} onChange={(e) => setNewQuestion({...newQuestion, subject: e.target.value})} style={styles.input}>
-              <option>Mathematics</option><option>English</option><option>Science</option>
+              <option>Mathematics</option>
+              <option>English</option>
+              <option>Science</option>
+              <option>Social Studies</option>
+              <option>Creative Arts</option>
             </select>
             <input placeholder="Question text" value={newQuestion.text} onChange={(e) => setNewQuestion({...newQuestion, text: e.target.value})} style={styles.input} />
             {newQuestion.options.map((opt, idx) => (
@@ -174,6 +180,10 @@ function AdminPage({ onBack }) {
             ))}
           </div>
         </div>
+      )}
+      
+      {activeTab === 'bulk' && (
+        <BulkImport onBack={() => setActiveTab('questions')} />
       )}
       
       {activeTab === 'delete' && (
