@@ -84,7 +84,6 @@ function GamePage({ student, token, onLogout }) {
       setLoading(true);
       try {
         const response = await api.get('/questions');
-        console.log('Loaded questions:', response.data.length);
         setQuestions(response.data);
         const subjectQuestions = response.data.filter(q => q.subject === selectedSubject);
         if (subjectQuestions.length > 0) {
@@ -180,25 +179,20 @@ function GamePage({ student, token, onLogout }) {
           </div>
           
           <div style={styles.card}>
-            {currentQuestion ? (
+            {currentQuestion && (
               <div>
                 <div style={styles.questionHeader}>
                   <span style={styles.subjectBadge}>{currentQuestion.subject}</span>
                   <span style={styles.difficultyBadge}>{currentQuestion.difficulty || 'Medium'}</span>
                 </div>
-                <h2 style={styles.questionText}>{currentQuestion.text || 'Question text missing'}</h2>
+                <h2 style={styles.questionText}>{currentQuestion.question}</h2>
                 <div style={styles.optionsGrid}>
-                  {currentQuestion.options && currentQuestion.options.map((option, idx) => (
+                  {currentQuestion.options.map((option, idx) => (
                     <button key={idx} onClick={() => handleAnswer(option, idx)} style={styles.optionButton}>
                       {option}
                     </button>
                   ))}
                 </div>
-              </div>
-            ) : (
-              <div style={{textAlign: 'center', padding: '40px'}}>
-                <p>No questions available for {selectedSubject}</p>
-                <p>Try another subject!</p>
               </div>
             )}
           </div>
@@ -257,7 +251,7 @@ const styles = {
   difficultyBadge: { background: '#4CAF50', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' },
   questionText: { fontSize: '22px', marginBottom: '25px', color: '#333', wordBreak: 'break-word' },
   optionsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  optionButton: { padding: '15px', background: '#f0f0f0', border: '2px solid #e0e0e0', borderRadius: '10px', cursor: 'pointer', fontSize: '16px', transition: 'all 0.3s' },
+  optionButton: { padding: '15px', background: '#f0f0f0', border: '2px solid #e0e0e0', borderRadius: '10px', cursor: 'pointer', fontSize: '16px' },
   scoreValue: { fontSize: '48px', fontWeight: 'bold', color: '#ffd700', textAlign: 'center' },
   kwachaValue: { fontSize: '48px', fontWeight: 'bold', color: '#4CAF50', textAlign: 'center' },
   levelValue: { fontSize: '32px', fontWeight: 'bold', color: '#764ba2', textAlign: 'center' },
@@ -269,16 +263,11 @@ const styles = {
 };
 
 const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+styleSheet.textContent = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @media (max-width: 768px) {
   div[style*="grid-template-columns: 1fr 350px"] { grid-template-columns: 1fr !important; }
   div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-  button[style*="padding: 15px"] { padding: 12px !important; font-size: 14px !important; }
-  h2[style*="font-size: 22px"] { font-size: 18px !important; }
-  div[style*="padding: 25px"] { padding: 15px !important; }
-}
-`;
+}`;
 document.head.appendChild(styleSheet);
 
 export default GamePage;

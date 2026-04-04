@@ -35,7 +35,7 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div>
       {currentPage === 'login' && <LoginPage onLogin={handleLogin} onAdminClick={() => setCurrentPage('admin')} />}
       {currentPage === 'game' && <GamePage student={student} token={token} onLogout={handleLogout} />}
       {currentPage === 'admin' && <AdminPage onBack={() => setCurrentPage('login')} />}
