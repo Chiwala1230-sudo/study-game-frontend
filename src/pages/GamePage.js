@@ -15,7 +15,7 @@ function GamePage({ student, token, onLogout }) {
   const [selectedOption, setSelectedOption] = useState(null);
   const [disabled, setDisabled] = useState(false);
   
-  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const audioRef = useRef(null);
   
   const playSound = (type) => {
@@ -30,8 +30,11 @@ function GamePage({ student, token, onLogout }) {
   
   const toggleMusic = () => {
     if (audioRef.current) {
-      if (isMusicPlaying) audioRef.current.pause();
-      else audioRef.current.play().catch(e => console.log('Music error:', e));
+      if (isMusicPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(e => console.log('Music error:', e));
+      }
       setIsMusicPlaying(!isMusicPlaying);
     }
   };
@@ -40,7 +43,7 @@ function GamePage({ student, token, onLogout }) {
     audioRef.current = new Audio('/sounds/background-music.mp3');
     audioRef.current.loop = true;
     audioRef.current.volume = 0.3;
-    audioRef.current.play().catch(e => console.log('Music autoplay error:', e));
+    // Don't autoplay - user must click music button first
     return () => { if (audioRef.current) audioRef.current.pause(); };
   }, []);
   
@@ -184,6 +187,7 @@ function GamePage({ student, token, onLogout }) {
   };
   
   const getQuestionText = (q) => {
+    if (!q) return 'Loading question...';
     return q.question || q.text || 'Question text not available';
   };
   
@@ -278,40 +282,50 @@ function GamePage({ student, token, onLogout }) {
       </div>
       
       <div style={styles.questionCard}>
-        <div style={styles.questionMeta}>
-          <span style={styles.subjectTag}>💜 {currentQuestion?.subject} 💜</span>
-          <span style={styles.difficultyTag}>
-            {currentQuestion?.difficulty === 'easy' && '🌟 Easy Peasy 🌟'}
-            {currentQuestion?.difficulty === 'medium' && '⭐ Getting There ⭐'}
-            {currentQuestion?.difficulty === 'hard' && '💪 Challenge Mode 💪'}
-          </span>
-        </div>
-        <h2 style={styles.questionText}>{getQuestionText(currentQuestion)}</h2>
-        <div style={styles.optionsGrid}>
-          {currentQuestion?.options.map((option, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleAnswer(option, idx)}
-              disabled={disabled}
-              style={{
-                ...styles.optionButton,
-                background: selectedOption === idx 
-                  ? (answerFeedback.isCorrect ? 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' : 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)')
-                  : 'white',
-                border: selectedOption === idx ? '2px solid #f093fb' : '2px solid #f0a6ca',
-                transform: selectedOption === idx ? 'scale(0.98)' : 'scale(1)'
-              }}
-            >
-              <span style={styles.optionLetter}>
-                {idx === 0 && '🌸'}
-                {idx === 1 && '💕'}
-                {idx === 2 && '⭐'}
-                {idx === 3 && '💎'}
+        {currentQuestion ? (
+          <>
+            <div style={styles.questionMeta}>
+              <span style={styles.subjectTag}>💜 {currentQuestion.subject} 💜</span>
+              <span style={styles.difficultyTag}>
+                {currentQuestion.difficulty === 'easy' && '🌟 Easy Peasy 🌟'}
+                {currentQuestion.difficulty === 'medium' && '⭐ Getting There ⭐'}
+                {currentQuestion.difficulty === 'hard' && '💪 Challenge Mode 💪'}
+                {!currentQuestion.difficulty && '⭐ Getting There ⭐'}
               </span>
-              {option}
-            </button>
-          ))}
-        </div>
+            </div>
+            <h2 style={styles.questionText}>{getQuestionText(currentQuestion)}</h2>
+            <div style={styles.optionsGrid}>
+              {currentQuestion.options && currentQuestion.options.map((option, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleAnswer(option, idx)}
+                  disabled={disabled}
+                  style={{
+                    ...styles.optionButton,
+                    background: selectedOption === idx 
+                      ? (answerFeedback.isCorrect ? 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' : 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)')
+                      : 'white',
+                    border: selectedOption === idx ? '2px solid #f093fb' : '2px solid #f0a6ca',
+                    transform: selectedOption === idx ? 'scale(0.98)' : 'scale(1)'
+                  }}
+                >
+                  <span style={styles.optionLetter}>
+                    {idx === 0 && '🌸'}
+                    {idx === 1 && '💕'}
+                    {idx === 2 && '⭐'}
+                    {idx === 3 && '💎'}
+                  </span>
+                  {option}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div style={styles.noQuestion}>
+            <p>🌸 No questions available for {selectedSubject} yet! 🌸</p>
+            <p>Ask your teacher to add some questions in the Admin Panel.</p>
+          </div>
+        )}
       </div>
       
       {stats && (
@@ -586,6 +600,11 @@ const styles = {
     marginTop: '15px', 
     color: '#d63384', 
     fontSize: '16px' 
+  },
+  noQuestion: {
+    textAlign: 'center',
+    padding: '40px',
+    color: '#d63384'
   }
 };
 
