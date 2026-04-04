@@ -1,658 +1,261 @@
-import React, { useState, useEffect } from 'react';
-import QuestionCard from '../components/Game/QuestionCard';
-import ScoreBoard from '../components/Game/ScoreBoard';
-import LevelProgress from '../components/Game/LevelProgress';
-import SubjectSelector from '../components/Game/SubjectSelector';
-import StudyTimer from '../components/Game/StudyTimer';
-import FinancialTracker from '../components/Game/FinancialTracker';
-import { fetchQuestions, recordCorrect, recordWrong, saveProgress } from '../services/api';
-import { getSmartRotation, calculateDailyReward } from '../utils/smartRotation';
-import soundService from '../services/soundService';
+import React, { useState, useEffect, useRef } from 'react';
+import api from '../services/api';
 
-const GamePage = () => {
-  const [gameMode, setGameMode] = useState('smart-rotation-required');
+function GamePage({ student, token, onLogout }) {
   const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [showResult, setShowResult] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState('Mathematics');
   const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
+  const [kwachaBalance, setKwachaBalance] = useState(0);
   const [level, setLevel] = useState('Novice');
-  const [questionsAnswered, setQuestionsAnswered] = useState(0);
-  const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [isCorrectAnswer, setIsCorrectAnswer] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
   
-  const [smartRotationSubjects, setSmartRotationSubjects] = useState([]);
-  const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
-  const [currentSubject, setCurrentSubject] = useState(null);
-  const [smartRotationScore, setSmartRotationScore] = useState(0);
-  const [smartRotationTotal, setSmartRotationTotal] = useState(0);
-  const [smartRotationCompleted, setSmartRotationCompleted] = useState(false);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const audioRef = useRef(null);
   
-  const [balance, setBalance] = useState(0);
-  const [weeklyTotal, setWeeklyTotal] = useState(0);
-  const [todayEarned, setTodayEarned] = useState(0);
-  const [todayPenalty, setTodayPenalty] = useState(0);
-  const [dailyScore, setDailyScore] = useState(null);
-  const [thresholds] = useState({
-    highScore: 80,
-    lowScore: 40,
-    highReward: 5,
-    lowPenalty: 5
-  });
+  const playSound = (type) => {
+    try {
+      const audio = new Audio();
+      if (type === 'correct') audio.src = '/sounds/correct.mp3';
+      else if (type === 'wrong') audio.src = '/sounds/wrong.mp3';
+      else if (type === 'levelup') audio.src = '/sounds/levelup.mp3';
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('Sound error:', e));
+    } catch(e) { console.log('Sound error:', e); }
+  };
   
-  const [weakSubjects, setWeakSubjects] = useState([
-    { subject: 'math', wrongCount: 0, wrongRate: 0 },
-    { subject: 'science', wrongCount: 0, wrongRate: 0 },
-    { subject: 'english', wrongCount: 0, wrongRate: 0 },
-    { subject: 'social', wrongCount: 0, wrongRate: 0 },
-    { subject: 'ct', wrongCount: 0, wrongRate: 0 }
-  ]);
-
-  const studentName = "Perez";
-
-  // Track level changes for sound
-  const prevLevelRef = React.useRef(level);
+  const toggleMusic = () => {
+    if (audioRef.current) {
+      if (isMusicPlaying) audioRef.current.pause();
+      else audioRef.current.play().catch(e => console.log('Music error:', e));
+      setIsMusicPlaying(!isMusicPlaying);
+    }
+  };
+  
   useEffect(() => {
-    if (prevLevelRef.current !== level && level !== 'Novice') {
-      soundService.play('levelup');
-    }
-    prevLevelRef.current = level;
-  }, [level]);
-
+    audioRef.current = new Audio('/sounds/background-music.mp3');
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.3;
+    return () => { if (audioRef.current) audioRef.current.pause(); };
+  }, []);
+  
+  const getDeviceInfo = () => {
+    const userAgent = navigator.userAgent;
+    let deviceType = 'Desktop';
+    let browser = 'Unknown';
+    let os = 'Unknown';
+    
+    if (/Mobi|Android|iPhone|iPad|iPod/i.test(userAgent)) deviceType = 'Mobile';
+    else if (/Tablet|iPad/i.test(userAgent)) deviceType = 'Tablet';
+    
+    if (userAgent.includes('Chrome')) browser = 'Chrome';
+    else if (userAgent.includes('Firefox')) browser = 'Firefox';
+    else if (userAgent.includes('Safari')) browser = 'Safari';
+    else if (userAgent.includes('Edge')) browser = 'Edge';
+    
+    if (userAgent.includes('Windows')) os = 'Windows';
+    else if (userAgent.includes('Mac')) os = 'Mac';
+    else if (userAgent.includes('Android')) os = 'Android';
+    else if (userAgent.includes('iOS')) os = 'iOS';
+    
+    return { deviceType, browser, os, userAgent };
+  };
+  
   useEffect(() => {
-    const savedBalance = localStorage.getItem('studyBalance');
-    if (savedBalance) setBalance(parseInt(savedBalance));
-    
-    const savedWeekly = localStorage.getItem('weeklyTotal');
-    if (savedWeekly) setWeeklyTotal(parseInt(savedWeekly));
-    
-    const rotation = getSmartRotation(weakSubjects, ['math', 'science', 'english', 'social', 'ct']);
-    setSmartRotationSubjects(rotation);
-  }, [weakSubjects]);
-
-  const toggleSound = () => {
-    const enabled = soundService.toggle();
-    setSoundEnabled(enabled);
-  };
-
-  const loadQuestionsForSubject = async (subjectId) => {
-    setLoading(true);
-    console.log(`📚 Loading ${subjectId} questions...`);
-    const subjectQuestions = await fetchQuestions(subjectId);
-    console.log(`📊 Got ${subjectQuestions.length} questions for ${subjectId}`);
-    
-    if (subjectQuestions.length === 0) {
-      setQuestions([]);
-      alert(`No questions found for ${subjectId}. Please add questions to database.`);
-      setLoading(false);
-      return false;
-    } else {
-      setQuestions(subjectQuestions);
-      setCurrentQuestionIndex(0);
-      setSelectedAnswer(null);
-      setShowResult(false);
-      setIsCorrectAnswer(false);
-      setScore(0);
-      setStreak(0);
-      setQuestionsAnswered(0);
-      setLoading(false);
-      return true;
-    }
-  };
-
-  const handleStartSmartRotation = () => {
-    soundService.play('click');
-    console.log("🚀 Starting Smart Rotation");
-    if (smartRotationSubjects.length > 0) {
-      setSmartRotationScore(0);
-      setSmartRotationTotal(0);
-      setCurrentSubjectIndex(0);
-      setCurrentSubject(smartRotationSubjects[0].subject);
-      loadQuestionsForSubject(smartRotationSubjects[0].subject);
-      setGameMode('smart-rotation-playing');
-    } else {
-      alert('No subjects available for rotation.');
-    }
-  };
-
-  const handleSelectSubject = async (subjectId) => {
-    soundService.play('click');
-    console.log(`🎯 Free roam - selecting subject: ${subjectId}`);
-    if (!smartRotationCompleted) {
-      alert('⚠️ You must complete Smart Rotation first!');
-      return;
-    }
-    
-    const success = await loadQuestionsForSubject(subjectId);
-    if (success) {
-      setGameMode('free-roam-playing');
-    }
-  };
-
-  const handleSelectRandom = async () => {
-    soundService.play('click');
-    console.log(`🎲 Free roam - selecting random questions`);
-    if (!smartRotationCompleted) {
-      alert('⚠️ You must complete Smart Rotation first!');
-      return;
-    }
-    
-    setLoading(true);
-    const allQuestions = await fetchQuestions();
-    console.log(`📊 Got ${allQuestions.length} random questions`);
-    
-    if (allQuestions.length === 0) {
-      alert('No questions found in database!');
-      setLoading(false);
-      return;
-    }
-    
-    setQuestions(allQuestions);
-    setCurrentQuestionIndex(0);
-    setSelectedAnswer(null);
-    setShowResult(false);
-    setIsCorrectAnswer(false);
-    setScore(0);
-    setStreak(0);
-    setQuestionsAnswered(0);
-    setLoading(false);
-    setGameMode('free-roam-playing');
-  };
-
-  const handleCompleteSmartRotation = () => {
-    let finalScore = 0;
-    if (smartRotationTotal > 0) {
-      finalScore = (smartRotationScore / smartRotationTotal) * 100;
-    }
-    
-    console.log(`📊 Smart Rotation Complete: ${smartRotationScore} out of ${smartRotationTotal} = ${finalScore}%`);
-    
-    setDailyScore(finalScore);
-    
-    const reward = calculateDailyReward(finalScore, thresholds);
-    
-    let newBalance = balance;
-    let newWeeklyTotal = weeklyTotal;
-    
-    if (reward.reward > 0) {
-      setTodayEarned(reward.reward);
-      newBalance = balance + reward.reward;
-      newWeeklyTotal = weeklyTotal + reward.reward;
-      setBalance(newBalance);
-      setWeeklyTotal(newWeeklyTotal);
-      setFeedbackMessage(reward.message);
-    } else if (reward.penalty > 0) {
-      setTodayPenalty(reward.penalty);
-      newBalance = balance - reward.penalty;
-      newWeeklyTotal = weeklyTotal - reward.penalty;
-      setBalance(newBalance);
-      setWeeklyTotal(newWeeklyTotal);
-      setFeedbackMessage(reward.message);
-    } else {
-      setFeedbackMessage(reward.message);
-    }
-    
-    localStorage.setItem('studyBalance', newBalance);
-    localStorage.setItem('weeklyTotal', newWeeklyTotal);
-    
-    setSmartRotationCompleted(true);
-    setGameMode('free-roam');
-    alert(`🎉 Smart Rotation Complete!\n\nScore: ${smartRotationScore} out of ${smartRotationTotal} (${finalScore.toFixed(1)}%)\n\n${reward.message}\n\nYou can now choose any subject!`);
-  };
-
-  const handleNextSubjectInRotation = async () => {
-    const nextIndex = currentSubjectIndex + 1;
-    if (nextIndex < smartRotationSubjects.length) {
-      setCurrentSubjectIndex(nextIndex);
-      setCurrentSubject(smartRotationSubjects[nextIndex].subject);
-      await loadQuestionsForSubject(smartRotationSubjects[nextIndex].subject);
-    } else {
-      handleCompleteSmartRotation();
-    }
-  };
-
-  const calculatePoints = (isCorrect) => {
-    let points = 0;
-    if (isCorrect) {
-      points = 10;
-      if (streak >= 5) {
-        points += 5;
-        setFeedbackMessage('🔥 Streak Bonus! +5 points');
-      } else if (streak >= 3) {
-        points += 3;
-        setFeedbackMessage('✨ Streak Bonus! +3 points');
-      } else {
-        setFeedbackMessage('✅ Correct! +10 points');
+    const loadStats = async () => {
+      try {
+        const response = await api.get(`/stats/${student.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setScore(response.data.totalScore);
+        setKwachaBalance(response.data.kwachaBalance);
+        setLevel(response.data.level);
+        setStats(response.data);
+      } catch (error) {
+        console.error('Error loading stats:', error);
       }
-    } else {
-      setFeedbackMessage('❌ Keep trying! You can do it!');
-    }
-    return points;
-  };
-
-  const updateLevel = (newScore) => {
-    if (newScore >= 500) setLevel('Grandmaster');
-    else if (newScore >= 300) setLevel('Master');
-    else if (newScore >= 150) setLevel('Expert');
-    else if (newScore >= 50) setLevel('Apprentice');
-    else setLevel('Novice');
-  };
-
-  const handleAnswerSelect = async (answerIndex) => {
-    if (showResult) return;
-    
-    setSelectedAnswer(answerIndex);
-    const currentQuestion = questions[currentQuestionIndex];
-    
-    if (!currentQuestion) {
-      console.error('No current question!');
-      return;
-    }
-    
-    const isCorrect = answerIndex === currentQuestion.correct;
-    setIsCorrectAnswer(isCorrect);
-    
-    // Play sound based on answer
-    if (isCorrect) {
-      soundService.play('correct');
-    } else {
-      soundService.play('wrong');
-    }
-    
-    const pointsEarned = calculatePoints(isCorrect);
-    
-    // Save progress to database
-    const progressData = {
-      studentName: studentName,
-      subject: currentSubject || currentQuestion.subject,
-      questionId: currentQuestion._id,
-      question: currentQuestion,
-      studentAnswer: answerIndex,
-      correctAnswer: currentQuestion.correct,
-      isCorrect: isCorrect,
-      timeSpent: 30,
-      timestamp: new Date()
     };
+    loadStats();
+  }, [student.id, token]);
+  
+  useEffect(() => {
+    const loadQuestions = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/questions');
+        setQuestions(response.data);
+        const subjectQuestions = response.data.filter(q => q.subject === selectedSubject);
+        if (subjectQuestions.length > 0) {
+          setCurrentQuestion(subjectQuestions[Math.floor(Math.random() * subjectQuestions.length)]);
+        }
+      } catch (error) {
+        console.error('Error loading questions:', error);
+      }
+      setLoading(false);
+    };
+    loadQuestions();
+  }, [selectedSubject]);
+  
+  const handleAnswer = async (answer) => {
+    if (!currentQuestion) return;
     
-    await saveProgress(progressData);
+    const isCorrect = answer === currentQuestion.correctAnswer;
+    const deviceInfo = getDeviceInfo();
     
-    if (isCorrect) {
-      setScore(prevScore => {
-        const newScore = prevScore + pointsEarned;
-        updateLevel(newScore);
-        return newScore;
+    if (isCorrect) playSound('correct');
+    else playSound('wrong');
+    
+    try {
+      const response = await api.post('/progress', {
+        studentId: student.id,
+        studentName: student.name,
+        questionId: currentQuestion._id,
+        subject: currentQuestion.subject,
+        isCorrect,
+        answerGiven: answer,
+        correctAnswer: currentQuestion.correctAnswer,
+        deviceInfo,
+        sessionId
       });
-      setStreak(prev => prev + 1);
       
-      if (gameMode === 'smart-rotation-playing') {
-        setSmartRotationScore(prev => prev + 10);
-        setSmartRotationTotal(prev => prev + 10);
-      }
+      setScore(response.data.stats.totalScore);
+      setKwachaBalance(response.data.stats.kwachaBalance);
+      setLevel(response.data.stats.level);
       
-      if (currentQuestion._id) {
-        await recordCorrect(currentQuestion._id);
-      }
-    } else {
-      setStreak(0);
-      
-      if (gameMode === 'smart-rotation-playing') {
-        setSmartRotationTotal(prev => prev + 10);
-      }
-      
-      if (gameMode === 'smart-rotation-playing' && currentSubject) {
-        const updatedWeakSubjects = weakSubjects.map(subj => 
-          subj.subject === currentSubject 
-            ? { ...subj, wrongCount: subj.wrongCount + 1 }
-            : subj
-        );
-        setWeakSubjects(updatedWeakSubjects);
-      }
-      
-      if (currentQuestion._id) {
-        await recordWrong(currentQuestion._id);
-      }
-    }
-    
-    setQuestionsAnswered(prev => prev + 1);
-    setShowResult(true);
-    
-    setTimeout(() => {
-      setFeedbackMessage('');
-    }, 2000);
-  };
-
-  const handleNextQuestion = () => {
-    soundService.play('click');
-    if (currentQuestionIndex + 1 < questions.length) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setSelectedAnswer(null);
-      setShowResult(false);
-      setIsCorrectAnswer(false);
-    } else {
-      if (gameMode === 'smart-rotation-playing') {
-        handleNextSubjectInRotation();
-      } else if (gameMode === 'free-roam-playing') {
-        alert(`🎉 Amazing job, ${studentName}! You completed all questions!\n\nFinal Score: ${score}\n\nChoose another subject to keep shining! ✨`);
-        setGameMode('free-roam');
-      }
+      const subjectQuestions = questions.filter(q => q.subject === selectedSubject);
+      const nextQuestion = subjectQuestions[Math.floor(Math.random() * subjectQuestions.length)];
+      setCurrentQuestion(nextQuestion);
+    } catch (error) {
+      console.error('Error saving progress:', error);
     }
   };
-
-  const handleTimerComplete = () => {
-    soundService.play('levelup');
-    alert(`🎉 Congratulations ${studentName}! You completed your 2-hour study session! 🌟`);
-  };
-
-  const handleBreak = () => {
-    alert('☕ Time for a 5-minute break! Stretch and relax, superstar! 💪');
-  };
-
-  const pointsToNextLevel = () => {
-    const levelScores = {
-      'Novice': 50,
-      'Apprentice': 150,
-      'Expert': 300,
-      'Master': 500,
-      'Grandmaster': Infinity
-    };
-    const currentScore = levelScores[level];
-    return Math.max(0, currentScore - score);
-  };
-
-  // SMART ROTATION REQUIRED SCREEN
-  if (gameMode === 'smart-rotation-required') {
+  
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
-        <div className="container mx-auto max-w-4xl">
-          {/* Sound Toggle Button */}
-          <div className="text-right mb-2">
-            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 sm:px-4 sm:py-2 shadow-md text-sm sm:text-base">
-              {soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
-            </button>
-          </div>
-          
-          <div className="text-center mb-4 sm:mb-6">
-            <div className="inline-block bg-white rounded-full p-3 sm:p-4 shadow-lg mb-2 sm:mb-4">
-              <span className="text-4xl sm:text-6xl">👩‍🎓✨</span>
+      <div style={styles.loading}>
+        <div style={styles.spinner}></div>
+        <p>Loading your adventure...</p>
+      </div>
+    );
+  }
+  
+  return (
+    <div style={styles.container}>
+      <div style={styles.musicPlayer}>
+        <button onClick={toggleMusic} style={styles.musicButton}>
+          {isMusicPlaying ? '🔊 Music On' : '🔇 Music Off'}
+        </button>
+      </div>
+      
+      <div style={styles.header}>
+        <div>
+          <h1 style={styles.title}>🎓 Welcome, {student.name}!</h1>
+          <p style={styles.grade}>Grade {student.grade || 7} Student</p>
+        </div>
+        <button onClick={onLogout} style={styles.logoutButton}>🚪 Logout</button>
+      </div>
+      
+      <div style={styles.gameGrid}>
+        <div style={styles.leftColumn}>
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>📚 Choose Subject</h3>
+            <div style={styles.subjectButtons}>
+              {['Mathematics', 'English', 'Science'].map(subj => (
+                <button key={subj} onClick={() => setSelectedSubject(subj)} style={{...styles.subjectButton, background: selectedSubject === subj ? '#764ba2' : '#e0e0e0', color: selectedSubject === subj ? 'white' : '#333'}}>
+                  {subj === 'Mathematics' && '🔢 '}{subj === 'English' && '📖 '}{subj === 'Science' && '🔬 '}{subj}
+                </button>
+              ))}
             </div>
-            <h1 className="text-2xl sm:text-4xl font-bold text-purple-700 mb-1 sm:mb-2">Welcome, Perez! 🌸</h1>
-            <p className="text-pink-600 text-sm sm:text-lg">Your learning adventure begins here!</p>
           </div>
           
-          <FinancialTracker 
-            balance={balance}
-            todayEarned={todayEarned}
-            todayPenalty={todayPenalty}
-            weeklyTotal={weeklyTotal}
-            thresholds={thresholds}
-          />
-          
-          <StudyTimer 
-            onComplete={handleTimerComplete}
-            onBreak={handleBreak}
-          />
-          
-          <div className="bg-gradient-to-r from-pink-200 to-purple-200 border-l-4 border-pink-500 p-4 sm:p-6 rounded-xl sm:rounded-2xl mb-4 sm:mb-6 shadow-lg">
-            <div className="text-center">
-              <div className="text-4xl sm:text-6xl mb-2 sm:mb-4">⭐⚡🌸</div>
-              <h2 className="text-xl sm:text-2xl font-bold text-purple-800 mb-2">Smart Rotation Required!</h2>
-              <p className="text-purple-700 text-sm sm:text-base mb-3 sm:mb-4">
-                Complete today's smart rotation to unlock all subjects, {studentName}! 🎀
-              </p>
-              <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 shadow-md">
-                <h3 className="font-bold text-pink-600 text-sm sm:text-base mb-2">Today's Subjects:</h3>
-                {smartRotationSubjects.map((subject, index) => (
-                  <div key={index} className="text-left text-gray-700 text-sm sm:text-base mb-1 sm:mb-2">
-                    {index + 1}. {subject.subject.toUpperCase()} - {subject.reason}
-                  </div>
-                ))}
+          <div style={styles.card}>
+            {currentQuestion && (
+              <div>
+                <div style={styles.questionHeader}>
+                  <span style={styles.subjectBadge}>{currentQuestion.subject}</span>
+                  <span style={styles.difficultyBadge}>{currentQuestion.difficulty}</span>
+                </div>
+                <h2 style={styles.questionText}>{currentQuestion.text}</h2>
+                <div style={styles.optionsGrid}>
+                  {currentQuestion.options.map((option, idx) => (
+                    <button key={idx} onClick={() => handleAnswer(option)} style={styles.optionButton}>
+                      {option}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <button
-                onClick={handleStartSmartRotation}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-full transition-all transform hover:scale-105 shadow-lg text-sm sm:text-base"
-              >
-                Start Smart Rotation ({smartRotationSubjects.length} subjects) 🚀
-              </button>
-            </div>
+            )}
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // SMART ROTATION PLAYING MODE
-  if (gameMode === 'smart-rotation-playing') {
-    if (loading || questions.length === 0) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
-          <div className="container mx-auto max-w-4xl text-center">
-            <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-xl">
-              <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-pink-500 mx-auto mb-3 sm:mb-4"></div>
-              <h2 className="text-xl sm:text-2xl font-bold text-purple-700 mb-2">Loading questions...</h2>
-              <p className="text-pink-600 text-sm sm:text-base">Just a moment, {studentName}! ✨</p>
+        
+        <div style={styles.rightColumn}>
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>⭐ Your Score</h3>
+            <div style={styles.scoreValue}>{score}</div>
+          </div>
+          
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>💰 Kwacha Balance</h3>
+            <div style={styles.kwachaValue}>K {kwachaBalance}</div>
+          </div>
+          
+          <div style={styles.card}>
+            <h3 style={styles.cardTitle}>🎯 Current Level</h3>
+            <div style={styles.levelValue}>{level}</div>
+            <div style={styles.levelProgress}>
+              <div style={{...styles.progressBar, width: `${Math.min((score / 1000) * 100, 100)}%`}}></div>
             </div>
           </div>
-        </div>
-      );
-    }
-
-    const currentQ = questions[currentQuestionIndex];
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex justify-between items-center mb-2">
-            <span className="bg-white rounded-full px-3 sm:px-4 py-1 sm:py-2 text-pink-600 font-semibold shadow-md text-xs sm:text-sm">
-              👩‍🎓 {studentName}'s Study Time
-            </span>
-            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 shadow-md text-sm">
-              {soundEnabled ? '🔊' : '🔇'}
-            </button>
-          </div>
           
-          <FinancialTracker 
-            balance={balance}
-            todayEarned={todayEarned}
-            todayPenalty={todayPenalty}
-            weeklyTotal={weeklyTotal}
-            thresholds={thresholds}
-          />
-          
-          <StudyTimer 
-            onComplete={handleTimerComplete}
-            onBreak={handleBreak}
-          />
-          
-          <div className="bg-gradient-to-r from-purple-200 to-pink-200 border-l-4 border-purple-500 p-3 sm:p-4 mb-3 sm:mb-4 rounded-lg sm:rounded-xl shadow-md">
-            <p className="text-purple-800 font-semibold text-sm sm:text-base">
-              🎯 Smart Rotation: {currentSubjectIndex + 1} of {smartRotationSubjects.length}
-            </p>
-            <p className="text-xs sm:text-sm text-pink-700">
-              Current: {currentSubject?.toUpperCase()} 
-            </p>
-          </div>
-          
-          <ScoreBoard 
-            score={score}
-            streak={streak}
-            level={level}
-            questionsAnswered={questionsAnswered}
-          />
-          
-          <LevelProgress 
-            currentLevel={level}
-            pointsToNextLevel={pointsToNextLevel()}
-          />
-          
-          {feedbackMessage && (
-            <div className={`mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg sm:rounded-xl text-center font-semibold text-sm sm:text-base ${
-              isCorrectAnswer ? 'bg-green-100 text-green-800 border-l-4 border-green-500' : 'bg-red-100 text-red-800 border-l-4 border-red-500'
-            }`}>
-              {feedbackMessage}
+          {stats && (
+            <div style={styles.card}>
+              <h3 style={styles.cardTitle}>📊 Your Progress</h3>
+              <div style={styles.statRow}><span>Questions:</span><strong>{stats.questionsAnswered}</strong></div>
+              <div style={styles.statRow}><span>Correct:</span><strong>{stats.correctAnswers}</strong></div>
+              <div style={styles.statRow}><span>Accuracy:</span><strong>{stats.questionsAnswered > 0 ? Math.round((stats.correctAnswers / stats.questionsAnswered) * 100) : 0}%</strong></div>
             </div>
           )}
-          
-          <QuestionCard
-            question={currentQ}
-            selectedAnswer={selectedAnswer}
-            onAnswerSelect={handleAnswerSelect}
-            onNext={handleNextQuestion}
-            showResult={showResult}
-            isCorrect={isCorrectAnswer}
-          />
-          
-          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-purple-600">
-            Question {currentQuestionIndex + 1} of {questions.length} 📚
-          </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  // FREE ROAM - SUBJECT SELECTION SCREEN
-  if (gameMode === 'free-roam') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-right mb-2">
-            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 shadow-md text-sm">
-              {soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
-            </button>
-          </div>
-          
-          <div className="text-center mb-4 sm:mb-6">
-            <div className="inline-block bg-white rounded-full p-3 sm:p-4 shadow-lg mb-2 sm:mb-4">
-              <span className="text-4xl sm:text-6xl">🌟👩‍🎓🌸</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-purple-700 mb-1">Great job, Perez! 🎉</h1>
-            <p className="text-pink-600 text-sm sm:text-base">You completed your Smart Rotation! Now choose any subject to study! 📖</p>
-          </div>
-          
-          <FinancialTracker 
-            balance={balance}
-            todayEarned={todayEarned}
-            todayPenalty={todayPenalty}
-            weeklyTotal={weeklyTotal}
-            thresholds={thresholds}
-          />
-          
-          <StudyTimer 
-            onComplete={handleTimerComplete}
-            onBreak={handleBreak}
-          />
-          
-          {dailyScore !== null && (
-            <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-gradient-to-r from-green-100 to-emerald-100 border-l-4 border-green-500 rounded-lg sm:rounded-xl shadow-md">
-              <p className="text-green-800 font-semibold text-sm sm:text-base">
-                ✅ Smart Rotation Complete! Today's Score: {dailyScore.toFixed(1)}%
-              </p>
-            </div>
-          )}
-          
-          <SubjectSelector 
-            onSelectSubject={handleSelectSubject}
-            onSelectRandom={handleSelectRandom}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // FREE ROAM - PLAYING MODE
-  if (gameMode === 'free-roam-playing') {
-    if (loading || questions.length === 0) {
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
-          <div className="container mx-auto max-w-4xl text-center">
-            <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-xl">
-              <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-pink-500 mx-auto mb-3 sm:mb-4"></div>
-              <h2 className="text-xl sm:text-2xl font-bold text-purple-700">Loading questions...</h2>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const currentQ = questions[currentQuestionIndex];
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 py-4 sm:py-8 px-2 sm:px-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="flex justify-between items-center mb-2">
-            <span className="bg-white rounded-full px-3 sm:px-4 py-1 sm:py-2 text-pink-600 font-semibold shadow-md text-xs sm:text-sm">
-              👩‍🎓 {studentName}'s Study Time
-            </span>
-            <button onClick={toggleSound} className="bg-white rounded-full px-3 py-1 shadow-md text-sm">
-              {soundEnabled ? '🔊' : '🔇'}
-            </button>
-          </div>
-          
-          <FinancialTracker 
-            balance={balance}
-            todayEarned={todayEarned}
-            todayPenalty={todayPenalty}
-            weeklyTotal={weeklyTotal}
-            thresholds={thresholds}
-          />
-          
-          <StudyTimer 
-            onComplete={handleTimerComplete}
-            onBreak={handleBreak}
-          />
-          
-          <div className="bg-gradient-to-r from-green-200 to-emerald-200 border-l-4 border-green-500 p-3 sm:p-4 mb-3 sm:mb-4 rounded-lg sm:rounded-xl shadow-md">
-            <p className="text-green-800 font-semibold text-sm sm:text-base">
-              🎓 Free Roam Mode - Choose any subject you want!
-            </p>
-            <button
-              onClick={() => setGameMode('free-roam')}
-              className="mt-1 sm:mt-2 text-xs sm:text-sm bg-green-500 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-full hover:bg-green-600 transition-all"
-            >
-              ← Change Subject
-            </button>
-          </div>
-          
-          <ScoreBoard 
-            score={score}
-            streak={streak}
-            level={level}
-            questionsAnswered={questionsAnswered}
-          />
-          
-          <LevelProgress 
-            currentLevel={level}
-            pointsToNextLevel={pointsToNextLevel()}
-          />
-          
-          {feedbackMessage && (
-            <div className={`mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg sm:rounded-xl text-center font-semibold text-sm sm:text-base ${
-              isCorrectAnswer ? 'bg-green-100 text-green-800 border-l-4 border-green-500' : 'bg-red-100 text-red-800 border-l-4 border-red-500'
-            }`}>
-              {feedbackMessage}
-            </div>
-          )}
-          
-          <QuestionCard
-            question={currentQ}
-            selectedAnswer={selectedAnswer}
-            onAnswerSelect={handleAnswerSelect}
-            onNext={handleNextQuestion}
-            showResult={showResult}
-            isCorrect={isCorrectAnswer}
-          />
-          
-          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-purple-600">
-            Question {currentQuestionIndex + 1} of {questions.length} 📚
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
+const styles = {
+  container: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f0ff 0%, #ffe6f0 100%)', padding: '20px' },
+  musicPlayer: { position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000 },
+  musicButton: { background: 'white', border: 'none', padding: '12px 20px', borderRadius: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.2)', cursor: 'pointer', fontWeight: 'bold', color: '#764ba2' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', padding: '20px', background: 'white', borderRadius: '15px' },
+  title: { color: '#764ba2', margin: 0, fontSize: '24px' },
+  grade: { color: '#666', margin: '5px 0 0' },
+  logoutButton: { background: '#ff6b6b', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' },
+  gameGrid: { display: 'grid', gridTemplateColumns: '1fr 350px', gap: '20px' },
+  leftColumn: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  rightColumn: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  card: { background: 'white', borderRadius: '15px', padding: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' },
+  cardTitle: { color: '#764ba2', marginTop: 0, marginBottom: '15px', fontSize: '18px' },
+  subjectButtons: { display: 'flex', gap: '10px' },
+  subjectButton: { flex: 1, padding: '10px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+  questionHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
+  subjectBadge: { background: '#764ba2', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' },
+  difficultyBadge: { background: '#4CAF50', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' },
+  questionText: { fontSize: '22px', marginBottom: '25px', color: '#333' },
+  optionsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
+  optionButton: { padding: '15px', background: '#f0f0f0', border: '2px solid #e0e0e0', borderRadius: '10px', cursor: 'pointer', fontSize: '16px' },
+  scoreValue: { fontSize: '48px', fontWeight: 'bold', color: '#ffd700', textAlign: 'center' },
+  kwachaValue: { fontSize: '48px', fontWeight: 'bold', color: '#4CAF50', textAlign: 'center' },
+  levelValue: { fontSize: '32px', fontWeight: 'bold', color: '#764ba2', textAlign: 'center' },
+  levelProgress: { background: '#e0e0e0', height: '10px', borderRadius: '5px', marginTop: '10px', overflow: 'hidden' },
+  progressBar: { background: '#764ba2', height: '100%', transition: 'width 0.3s' },
+  statRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' },
+  loading: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' },
+  spinner: { width: '50px', height: '50px', border: '5px solid rgba(255,255,255,0.3)', borderTop: '5px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }
 };
+
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
+document.head.appendChild(styleSheet);
 
 export default GamePage;
