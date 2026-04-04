@@ -12,6 +12,7 @@ function GamePage({ student, token, onLogout }) {
   const [loading, setLoading] = useState(true);
   const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
   const [answerFeedback, setAnswerFeedback] = useState({ show: false, isCorrect: false, message: '', explanation: '' });
+  const [selectedOption, setSelectedOption] = useState(null);
   const [disabled, setDisabled] = useState(false);
   
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
@@ -103,6 +104,7 @@ function GamePage({ student, token, onLogout }) {
   const handleAnswer = async (answer, optionIndex) => {
     if (!currentQuestion || disabled) return;
     
+    setSelectedOption(optionIndex);
     setDisabled(true);
     
     let isCorrect = false;
@@ -114,27 +116,30 @@ function GamePage({ student, token, onLogout }) {
     
     const deviceInfo = getDeviceInfo();
     const correctAnswerText = currentQuestion.correctAnswer || currentQuestion.options[currentQuestion.correct];
-    const explanation = currentQuestion.explanation || (isCorrect ? 'Great job!' : `The correct answer is: ${correctAnswerText}`);
+    const explanation = currentQuestion.explanation || (isCorrect ? '✨ Amazing! ✨' : `💖 The correct answer is: ${correctAnswerText}`);
     
     if (isCorrect) {
       setAnswerFeedback({ 
         show: true, 
         isCorrect: true, 
-        message: '+10 points! +5 Kwacha', 
-        explanation: '' 
+        message: '🎉 PERFECT! 🎉 +10 points +5 Kwacha', 
+        explanation: '🌸 You\'re so smart! 🌸' 
       });
       playSound('correct');
     } else {
       setAnswerFeedback({ 
         show: true, 
         isCorrect: false, 
-        message: 'Wrong answer', 
+        message: '💕 Aww, next time! 💕', 
         explanation: explanation 
       });
       playSound('wrong');
     }
     
-    setTimeout(() => setAnswerFeedback({ show: false, isCorrect: false, message: '', explanation: '' }), 2500);
+    setTimeout(() => {
+      setAnswerFeedback({ show: false, isCorrect: false, message: '', explanation: '' });
+      setSelectedOption(null);
+    }, 2500);
     
     try {
       const response = await api.post('/progress', {
@@ -167,11 +172,21 @@ function GamePage({ student, token, onLogout }) {
     }
   };
   
+  const getLevelEmoji = () => {
+    if (level === 'Novice') return '🌱';
+    if (level === 'Beginner') return '🌸';
+    if (level === 'Intermediate') return '⭐';
+    if (level === 'Expert') return '💎';
+    if (level === 'Master') return '👑';
+    if (level === 'Grandmaster') return '🌟';
+    return '💖';
+  };
+  
   if (loading) {
     return (
       <div style={styles.loading}>
         <div style={styles.spinner}></div>
-        <p>Loading...</p>
+        <p style={styles.loadingText}>🌸 Loading your magical adventure... 🌸</p>
       </div>
     );
   }
@@ -180,47 +195,53 @@ function GamePage({ student, token, onLogout }) {
     <div style={styles.container}>
       {/* Music Button */}
       <button onClick={toggleMusic} style={styles.musicButton}>
-        {isMusicPlaying ? '🔊' : '🔇'}
+        {isMusicPlaying ? '🎵' : '🎵🔇'}
       </button>
       
       {/* Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Welcome, {student.name}</h1>
-          <p style={styles.grade}>Grade {student.grade || 7}</p>
+          <h1 style={styles.title}>🌸 Welcome, {student.name}! 🌸</h1>
+          <p style={styles.grade}>✨ Grade {student.grade || 7} Star Student ✨</p>
         </div>
-        <button onClick={onLogout} style={styles.logoutButton}>Logout</button>
+        <button onClick={onLogout} style={styles.logoutButton}>🚪 Goodbye</button>
       </div>
       
-      {/* Stats Row */}
+      {/* Stats Row - Girly Cards */}
       <div style={styles.statsGrid}>
         <div style={styles.statBox}>
+          <div style={styles.statEmoji}>⭐</div>
           <div style={styles.statValue}>{score}</div>
-          <div style={styles.statLabel}>Points</div>
+          <div style={styles.statLabel}>Sparkle Points</div>
         </div>
         <div style={styles.statBox}>
+          <div style={styles.statEmoji}>💰</div>
           <div style={styles.statValue}>K{kwachaBalance}</div>
           <div style={styles.statLabel}>Kwacha</div>
         </div>
         <div style={styles.statBox}>
+          <div style={styles.statEmoji}>{getLevelEmoji()}</div>
           <div style={styles.statValue}>{level}</div>
           <div style={styles.statLabel}>Level</div>
         </div>
       </div>
       
-      {/* Progress Bar */}
+      {/* Progress Bar - Girly */}
       <div style={styles.progressContainer}>
+        <div style={styles.progressLabel}>💖 Journey to Grandmaster 💖</div>
         <div style={styles.progressBar}>
           <div style={{...styles.progressFill, width: `${(score / 1000) * 100}%`}}></div>
         </div>
-        <div style={styles.progressText}>{score}/1000 XP</div>
+        <div style={styles.progressText}>{score}/1000 Sparkle Points ✨</div>
       </div>
       
-      {/* Feedback Toast */}
+      {/* Feedback Toast - Girly */}
       {answerFeedback.show && (
         <div style={{
           ...styles.toast,
-          backgroundColor: answerFeedback.isCorrect ? '#10b981' : '#ef4444'
+          background: answerFeedback.isCorrect 
+            ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+            : 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
         }}>
           <div style={styles.toastMessage}>{answerFeedback.message}</div>
           {answerFeedback.explanation && (
@@ -229,7 +250,7 @@ function GamePage({ student, token, onLogout }) {
         </div>
       )}
       
-      {/* Subject Selector */}
+      {/* Subject Selector - Girly */}
       <div style={styles.subjectsContainer}>
         {['Mathematics', 'English', 'Science'].map(subj => (
           <button
@@ -237,21 +258,31 @@ function GamePage({ student, token, onLogout }) {
             onClick={() => setSelectedSubject(subj)}
             style={{
               ...styles.subjectButton,
-              backgroundColor: selectedSubject === subj ? '#6366f1' : '#f3f4f6',
-              color: selectedSubject === subj ? 'white' : '#4b5563'
+              background: selectedSubject === subj 
+                ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                : 'white',
+              color: selectedSubject === subj ? 'white' : '#d63384',
+              border: selectedSubject === subj ? 'none' : '2px solid #f0a6ca'
             }}
           >
-            {subj === 'Mathematics' && '📐'} {subj === 'English' && '📖'} {subj === 'Science' && '🔬'}
+            {subj === 'Mathematics' && '🔢'} {subj === 'English' && '📚'} {subj === 'Science' && '🔬'}
             <span style={{marginLeft: '8px'}}>{subj}</span>
+            {subj === 'Mathematics' && ' ➕'}
+            {subj === 'English' && ' ✨'}
+            {subj === 'Science' && ' 🧪'}
           </button>
         ))}
       </div>
       
-      {/* Question Card */}
+      {/* Question Card - Girly */}
       <div style={styles.questionCard}>
         <div style={styles.questionMeta}>
-          <span style={styles.subjectTag}>{currentQuestion?.subject}</span>
-          <span style={styles.difficultyTag}>{currentQuestion?.difficulty || 'Medium'}</span>
+          <span style={styles.subjectTag}>💜 {currentQuestion?.subject} 💜</span>
+          <span style={styles.difficultyTag}>
+            {currentQuestion?.difficulty === 'easy' && '🌟 Easy Peasy 🌟'}
+            {currentQuestion?.difficulty === 'medium' && '⭐ Getting There ⭐'}
+            {currentQuestion?.difficulty === 'hard' && '💪 Challenge Mode 💪'}
+          </span>
         </div>
         <h2 style={styles.questionText}>{currentQuestion?.question}</h2>
         <div style={styles.optionsGrid}>
@@ -260,27 +291,40 @@ function GamePage({ student, token, onLogout }) {
               key={idx}
               onClick={() => handleAnswer(option, idx)}
               disabled={disabled}
-              style={styles.optionButton}
+              style={{
+                ...styles.optionButton,
+                background: selectedOption === idx 
+                  ? (answerFeedback.isCorrect ? 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' : 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)')
+                  : 'white',
+                border: selectedOption === idx ? '2px solid #f093fb' : '2px solid #f0a6ca',
+                transform: selectedOption === idx ? 'scale(0.98)' : 'scale(1)'
+              }}
             >
+              <span style={styles.optionLetter}>
+                {idx === 0 && '🌸'}
+                {idx === 1 && '💕'}
+                {idx === 2 && '⭐'}
+                {idx === 3 && '💎'}
+              </span>
               {option}
             </button>
           ))}
         </div>
       </div>
       
-      {/* Progress Stats */}
+      {/* Progress Stats - Girly */}
       {stats && (
         <div style={styles.progressStats}>
           <div style={styles.progressStatItem}>
-            <span>Questions</span>
+            <span>📝 Questions</span>
             <strong>{stats.questionsAnswered}</strong>
           </div>
           <div style={styles.progressStatItem}>
-            <span>Correct</span>
+            <span>✅ Correct</span>
             <strong>{stats.correctAnswers}</strong>
           </div>
           <div style={styles.progressStatItem}>
-            <span>Accuracy</span>
+            <span>🎯 Accuracy</span>
             <strong>{stats.questionsAnswered > 0 ? Math.round((stats.correctAnswers / stats.questionsAnswered) * 100) : 0}%</strong>
           </div>
         </div>
@@ -292,7 +336,7 @@ function GamePage({ student, token, onLogout }) {
 const styles = {
   container: {
     minHeight: '100vh',
-    background: '#f9fafb',
+    background: 'linear-gradient(135deg, #ffe9f4 0%, #ffe0f0 50%, #ffd6ea 100%)',
     padding: '20px',
     paddingBottom: '40px'
   },
@@ -300,41 +344,45 @@ const styles = {
     position: 'fixed',
     bottom: '20px',
     right: '20px',
-    width: '48px',
-    height: '48px',
-    borderRadius: '24px',
+    width: '50px',
+    height: '50px',
+    borderRadius: '25px',
     background: 'white',
-    border: '1px solid #e5e7eb',
+    border: '2px solid #f0a6ca',
     fontSize: '20px',
     cursor: 'pointer',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    zIndex: 100
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.3)',
+    zIndex: 100,
+    color: '#d63384'
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '24px'
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    gap: '10px'
   },
   title: {
     fontSize: '20px',
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#d63384',
     margin: 0
   },
   grade: {
     fontSize: '14px',
-    color: '#6b7280',
+    color: '#e86f9c',
     margin: '4px 0 0'
   },
   logoutButton: {
     background: 'white',
-    border: '1px solid #e5e7eb',
+    border: '2px solid #f0a6ca',
     padding: '8px 16px',
-    borderRadius: '8px',
+    borderRadius: '25px',
     fontSize: '14px',
     cursor: 'pointer',
-    color: '#6b7280'
+    color: '#d63384',
+    fontWeight: '500'
   },
   statsGrid: {
     display: 'grid',
@@ -344,67 +392,81 @@ const styles = {
   },
   statBox: {
     background: 'white',
-    borderRadius: '16px',
+    borderRadius: '20px',
     padding: '16px',
     textAlign: 'center',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)',
+    border: '1px solid #f0a6ca'
+  },
+  statEmoji: {
+    fontSize: '28px',
+    marginBottom: '5px'
   },
   statValue: {
     fontSize: '28px',
     fontWeight: '700',
-    color: '#6366f1'
+    color: '#d63384'
   },
   statLabel: {
     fontSize: '12px',
-    color: '#6b7280',
+    color: '#e86f9c',
     marginTop: '4px'
   },
   progressContainer: {
     background: 'white',
-    borderRadius: '12px',
-    padding: '12px',
+    borderRadius: '20px',
+    padding: '15px',
     marginBottom: '24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)',
+    border: '1px solid #f0a6ca'
+  },
+  progressLabel: {
+    fontSize: '12px',
+    color: '#d63384',
+    marginBottom: '8px',
+    textAlign: 'center',
+    fontWeight: '500'
   },
   progressBar: {
-    background: '#e5e7eb',
-    height: '8px',
-    borderRadius: '4px',
+    background: '#ffe0f0',
+    height: '10px',
+    borderRadius: '5px',
     overflow: 'hidden'
   },
   progressFill: {
-    background: '#6366f1',
+    background: 'linear-gradient(90deg, #f093fb 0%, #f5576c 100%)',
     height: '100%',
-    borderRadius: '4px',
+    borderRadius: '5px',
     transition: 'width 0.3s'
   },
   progressText: {
-    fontSize: '12px',
-    color: '#6b7280',
+    fontSize: '11px',
+    color: '#e86f9c',
     marginTop: '8px',
     textAlign: 'right'
   },
   toast: {
     position: 'fixed',
-    top: '20px',
+    top: '80px',
     left: '50%',
     transform: 'translateX(-50%)',
-    padding: '12px 20px',
-    borderRadius: '12px',
+    padding: '15px 25px',
+    borderRadius: '50px',
     color: 'white',
     zIndex: 200,
     textAlign: 'center',
     maxWidth: '90%',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+    boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+    fontWeight: '500'
   },
   toastMessage: {
-    fontSize: '14px',
-    fontWeight: '500'
+    fontSize: '15px',
+    fontWeight: '600'
   },
   toastExplanation: {
     fontSize: '12px',
-    marginTop: '4px',
-    opacity: 0.9
+    marginTop: '5px',
+    opacity: 0.95
   },
   subjectsContainer: {
     display: 'flex',
@@ -417,37 +479,39 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px',
-    borderRadius: '12px',
-    border: 'none',
+    borderRadius: '30px',
     fontSize: '14px',
     fontWeight: '500',
     cursor: 'pointer',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
+    boxShadow: '0 2px 8px rgba(240, 166, 202, 0.2)'
   },
   questionCard: {
     background: 'white',
-    borderRadius: '20px',
-    padding: '24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    marginBottom: '20px'
+    borderRadius: '30px',
+    padding: '25px',
+    boxShadow: '0 8px 25px rgba(240, 166, 202, 0.2)',
+    marginBottom: '20px',
+    border: '1px solid #f0a6ca'
   },
   questionMeta: {
     display: 'flex',
-    gap: '8px',
-    marginBottom: '16px'
+    gap: '10px',
+    marginBottom: '16px',
+    flexWrap: 'wrap'
   },
   subjectTag: {
-    background: '#e0e7ff',
-    color: '#6366f1',
-    padding: '4px 12px',
+    background: '#ffe0f0',
+    color: '#d63384',
+    padding: '5px 15px',
     borderRadius: '20px',
     fontSize: '12px',
     fontWeight: '500'
   },
   difficultyTag: {
-    background: '#f3f4f6',
-    color: '#6b7280',
-    padding: '4px 12px',
+    background: '#f0a6ca20',
+    color: '#e86f9c',
+    padding: '5px 15px',
     borderRadius: '20px',
     fontSize: '12px',
     fontWeight: '500'
@@ -455,40 +519,49 @@ const styles = {
   questionText: {
     fontSize: '18px',
     fontWeight: '500',
-    color: '#1f2937',
+    color: '#4a4a4a',
     margin: '0 0 20px',
     lineHeight: 1.4
   },
   optionsGrid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px'
+    gap: '12px'
   },
   optionButton: {
     width: '100%',
     padding: '14px',
-    background: '#f3f4f6',
-    border: '1px solid #e5e7eb',
-    borderRadius: '12px',
+    borderRadius: '50px',
     fontSize: '14px',
     textAlign: 'left',
     cursor: 'pointer',
     transition: 'all 0.2s',
-    color: '#1f2937'
+    color: '#4a4a4a',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    fontWeight: '500'
+  },
+  optionLetter: {
+    fontSize: '16px',
+    width: '30px'
   },
   progressStats: {
     background: 'white',
-    borderRadius: '16px',
+    borderRadius: '25px',
     padding: '16px',
     display: 'flex',
     justifyContent: 'space-around',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    boxShadow: '0 4px 15px rgba(240, 166, 202, 0.2)',
+    border: '1px solid #f0a6ca'
   },
   progressStatItem: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '4px'
+    gap: '5px',
+    color: '#d63384',
+    fontSize: '12px'
   },
   loading: {
     display: 'flex',
@@ -496,15 +569,20 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    background: '#f9fafb'
+    background: 'linear-gradient(135deg, #ffe9f4 0%, #ffe0f0 100%)'
   },
   spinner: {
-    width: '40px',
-    height: '40px',
-    border: '3px solid #e5e7eb',
-    borderTop: '3px solid #6366f1',
+    width: '50px',
+    height: '50px',
+    border: '3px solid #f0a6ca',
+    borderTop: '3px solid #d63384',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite'
+  },
+  loadingText: {
+    marginTop: '15px',
+    color: '#d63384',
+    fontSize: '16px'
   }
 };
 
@@ -515,7 +593,7 @@ styleSheet.textContent = `
     100% { transform: rotate(360deg); }
   }
   button:hover {
-    transform: scale(1.01);
+    transform: scale(1.02);
   }
 `;
 document.head.appendChild(styleSheet);
