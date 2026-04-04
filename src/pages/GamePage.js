@@ -10,6 +10,7 @@ function GamePage({ student, token, onLogout }) {
   const [level, setLevel] = useState('Novice');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
   
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
@@ -83,15 +84,22 @@ function GamePage({ student, token, onLogout }) {
   useEffect(() => {
     const loadQuestions = async () => {
       setLoading(true);
+      setError(null);
       try {
+        console.log('Loading questions...');
         const response = await api.get('/questions');
+        console.log('Questions received:', response.data.length);
         setQuestions(response.data);
         const subjectQuestions = response.data.filter(q => q.subject === selectedSubject);
+        console.log('Subject questions:', subjectQuestions.length);
         if (subjectQuestions.length > 0) {
           setCurrentQuestion(subjectQuestions[Math.floor(Math.random() * subjectQuestions.length)]);
+        } else {
+          setError(`No questions found for ${selectedSubject}`);
         }
       } catch (error) {
         console.error('Error loading questions:', error);
+        setError('Failed to load questions. Check your internet connection.');
       }
       setLoading(false);
     };
@@ -101,7 +109,6 @@ function GamePage({ student, token, onLogout }) {
   const handleAnswer = async (answer, optionIndex) => {
     if (!currentQuestion) return;
     
-    // Check if correct using either format
     let isCorrect = false;
     if (currentQuestion.correctAnswer) {
       isCorrect = answer === currentQuestion.correctAnswer;
@@ -132,7 +139,7 @@ function GamePage({ student, token, onLogout }) {
       setLevel(response.data.stats.level);
       
       const subjectQuestions = questions.filter(q => q.subject === selectedSubject);
-      const nextQuestion = subjectQuestions[Math.floor(Math.random() * subjectQuestions.length)];
+      const nextQuestion = subjectQuestions[Math.floor(Math.random() subjectQuestions.length)];
       setCurrentQuestion(nextQuestion);
     } catch (error) {
       console.error('Error saving progress:', error);
@@ -144,6 +151,18 @@ function GamePage({ student, token, onLogout }) {
       <div style={styles.loading}>
         <div style={styles.spinner}></div>
         <p>Loading your adventure...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h2>⚠️ Error</h2>
+          <p>{error}</p>
+          <button onClick={() => window.location.reload()} style={styles.button}>Retry</button>
+        </div>
       </div>
     );
   }
@@ -164,6 +183,10 @@ function GamePage({ student, token, onLogout }) {
         <button onClick={onLogout} style={styles.logoutButton}>🚪 Logout</button>
       </div>
       
+      <div style={styles.debugInfo}>
+        <p>✅ Loaded {questions.length} questions | Subject: {selectedSubject} | Current question: {currentQuestion ? 'Yes' : 'No'}</p>
+      </div>
+      
       <div style={styles.gameGrid}>
         <div style={styles.leftColumn}>
           <div style={styles.card}>
@@ -178,7 +201,7 @@ function GamePage({ student, token, onLogout }) {
           </div>
           
           <div style={styles.card}>
-            {currentQuestion && (
+            {currentQuestion ? (
               <div>
                 <div style={styles.questionHeader}>
                   <span style={styles.subjectBadge}>{currentQuestion.subject}</span>
@@ -192,6 +215,11 @@ function GamePage({ student, token, onLogout }) {
                     </button>
                   ))}
                 </div>
+              </div>
+            ) : (
+              <div style={{textAlign: 'center', padding: '40px'}}>
+                <p>No questions available for {selectedSubject}</p>
+                <p>Try another subject!</p>
               </div>
             )}
           </div>
@@ -238,6 +266,7 @@ const styles = {
   title: { color: '#764ba2', margin: 0, fontSize: '24px' },
   grade: { color: '#666', margin: '5px 0 0' },
   logoutButton: { background: '#ff6b6b', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' },
+  debugInfo: { background: '#333', color: '#0f0', padding: '10px', borderRadius: '5px', marginBottom: '20px', fontSize: '12px', fontFamily: 'monospace' },
   gameGrid: { display: 'grid', gridTemplateColumns: '1fr 350px', gap: '20px' },
   leftColumn: { display: 'flex', flexDirection: 'column', gap: '20px' },
   rightColumn: { display: 'flex', flexDirection: 'column', gap: '20px' },
@@ -258,7 +287,8 @@ const styles = {
   progressBar: { background: '#764ba2', height: '100%', transition: 'width 0.3s' },
   statRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f0f0f0' },
   loading: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' },
-  spinner: { width: '50px', height: '50px', border: '5px solid rgba(255,255,255,0.3)', borderTop: '5px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' }
+  spinner: { width: '50px', height: '50px', border: '5px solid rgba(255,255,255,0.3)', borderTop: '5px solid white', borderRadius: '50%', animation: 'spin 1s linear infinite' },
+  button: { background: '#764ba2', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer' }
 };
 
 const styleSheet = document.createElement("style");
